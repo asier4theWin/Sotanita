@@ -16,7 +16,9 @@
     "firebase": "^12.10.0",
     "lottie-react-native": "~7.3.4",
     "react": "19.2.0",
+    "react-dom": "19.2.0",
     "react-native": "0.83.2",
+    "react-native-web": "^0.21.0",
     "zod": "^4.3.6"
   },
   "private": true
