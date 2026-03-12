@@ -1,0 +1,23 @@
+{
+  "name": "sotanitapp",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.21",
+    "expo": "~55.0.6",
+    "expo-router": "~55.0.5",
+    "expo-status-bar": "~55.0.4",
+    "firebase": "^12.10.0",
+    "lottie-react-native": "~7.3.4",
+    "react": "19.2.0",
+    "react-native": "0.83.2",
+    "zod": "^4.3.6"
+  },
+  "private": true
+}
