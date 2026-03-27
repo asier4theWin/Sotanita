@@ -1,7 +1,7 @@
 const baseDark = {
-  primary: '#F59E0B',
-  primaryDark: '#D97706',
-  secondary: '#10B981',
+  primary: '#22C55E',
+  primaryDark: '#15803D',
+  secondary: '#34D399',
   background: '#020617',
   surface: '#111827',
   surfaceElevated: '#1F2937',
@@ -16,9 +16,9 @@ const baseDark = {
 };
 
 const baseLight = {
-  primary: '#F59E0B',
-  primaryDark: '#D97706',
-  secondary: '#059669',
+  primary: '#16A34A',
+  primaryDark: '#166534',
+  secondary: '#22C55E',
   background: '#F9FAFB',
   surface: '#FFFFFF',
   surfaceElevated: '#F3F4F6',
@@ -33,15 +33,15 @@ const baseLight = {
 };
 
 const highContrastDark = {
-  primary: '#FFB000',
-  primaryDark: '#D99200',
+  primary: '#39FF14',
+  primaryDark: '#1DBF0A',
   secondary: '#00E676',
   background: '#000000',
   surface: '#0A0A0A',
   surfaceElevated: '#111111',
   text: '#FFFFFF',
   textMuted: '#E5E5E5',
-  border: '#FFB000',
+  border: '#39FF14',
   danger: '#FF5252',
   success: '#00E676',
   overlay: 'rgba(0,0,0,0.75)',
@@ -50,10 +50,10 @@ const highContrastDark = {
 };
 
 export const gradients = {
-  appDark: ['#030712', '#111827', '#451A03'],
-  appLight: ['#F9FAFB', '#E5E7EB', '#FEF3C7'],
+  appDark: ['#02160C', '#0B2D1A', '#14532D'],
+  appLight: ['#F7FDF9', '#DCFCE7', '#BBF7D0'],
   video: ['rgba(6,78,59,0.4)', 'rgba(17,24,39,0.9)', 'rgba(30,64,175,0.4)'],
-  fifaCard: ['#FCD34D', '#F59E0B', '#D97706'],
+  fifaCard: ['#86EFAC', '#22C55E', '#15803D'],
 };
 
 export const getThemeColors = ({ darkMode = true, highContrast = false } = {}) => {

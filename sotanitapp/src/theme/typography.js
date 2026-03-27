@@ -1,4 +1,7 @@
 const typography = {
+  families: {
+    worldCup: 'WorldCup26',
+  },
   sizes: {
     xs: 12,
     sm: 14,

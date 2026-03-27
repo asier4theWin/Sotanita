@@ -1,12 +1,14 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { useAppTheme } from '../hooks/useAppTheme';
 
+const cardBackground = require('../../assets/fondo.png');
+const cardFrame = require('../../assets/marco.png');
+
 const sizes = {
-  small: { width: 64, height: 92, title: 10, subtitle: 8, rating: 11 },
-  medium: { width: 96, height: 132, title: 12, subtitle: 10, rating: 14 },
-  large: { width: 132, height: 184, title: 15, subtitle: 12, rating: 18 },
+  small: { width: 66, height: 94, title: 12, subtitle: 8, rating: 11, position: 9, topPad: 7 },
+  medium: { width: 100, height: 142, title: 14, subtitle: 10, rating: 14, position: 10, topPad: 9 },
+  large: { width: 146, height: 206, title: 17, subtitle: 12, rating: 19, position: 11, topPad: 11 },
+  xlarge: { width: 174, height: 246, title: 19, subtitle: 13, rating: 22, position: 12, topPad: 13 },
 };
 
 export default function FifaCard({
@@ -15,109 +17,85 @@ export default function FifaCard({
   position,
   rating = 85,
   size = 'medium',
+  disableShadow = false,
   style,
 }) {
-  const { colors, gradients } = useAppTheme();
+  const { colors } = useAppTheme();
   const current = sizes[size] || sizes.medium;
 
   return (
-    <LinearGradient
-      colors={gradients.fifaCard}
+    <View
       style={[
         styles.card,
+        disableShadow && styles.noShadow,
         {
           width: current.width,
           height: current.height,
-          borderColor: `${colors.primary}99`,
         },
         style,
       ]}
     >
-      <View style={styles.ratingWrap}>
-        <Text style={[styles.rating, { color: '#4A2C00', fontSize: current.rating }]}>{rating}</Text>
-        <Text style={[styles.position, { color: '#4A2C00' }]}>{position}</Text>
-      </View>
+      <Image source={cardBackground} style={styles.assetLayer} resizeMode="stretch" />
 
-      <View style={styles.avatarWrap}>
-        <View style={styles.avatarBg}>
-          <Ionicons name="person" size={size === 'large' ? 42 : size === 'medium' ? 30 : 22} color="rgba(74,44,0,0.45)" />
+      <View style={[styles.contentLayer, { paddingTop: current.topPad }]}> 
+        <View style={styles.footer}>
+          <Text numberOfLines={1} style={[styles.username, { fontSize: current.title, color: colors.black }]}>
+            {username}
+          </Text>
+          <Text numberOfLines={1} style={[styles.position, { fontSize: current.position, color: colors.black }]}>
+            {position}
+          </Text>
         </View>
       </View>
 
-      <View style={styles.footer}>
-        <Text numberOfLines={1} style={[styles.username, { fontSize: current.title }]}>
-          {username}
-        </Text>
-        <Text numberOfLines={1} style={[styles.team, { fontSize: current.subtitle }]}>
-          {team}
-        </Text>
-      </View>
-
-      <View style={styles.shine} />
-    </LinearGradient>
+      <Image source={cardFrame} style={styles.assetLayer} resizeMode="stretch" />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 14,
-    borderWidth: 2,
-    overflow: 'hidden',
+    borderRadius: 12,
+    overflow: 'visible',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.28,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOpacity: 0.26,
+    shadowRadius: 14,
+    elevation: 8,
   },
-  ratingWrap: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
+  noShadow: {
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
   },
-  rating: {
-    fontWeight: '900',
-    lineHeight: 20,
+  assetLayer: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
   },
-  position: {
-    fontWeight: '700',
-    fontSize: 10,
-  },
-  avatarWrap: {
-    flex: 1,
+  contentLayer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 24,
-  },
-  avatarBg: {
-    width: '55%',
-    aspectRatio: 1,
-    borderRadius: 999,
-    backgroundColor: 'rgba(74,44,0,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    zIndex: 2,
   },
   footer: {
-    paddingHorizontal: 6,
-    paddingBottom: 8,
-    paddingTop: 16,
-    backgroundColor: 'rgba(74,44,0,0.6)',
+    paddingHorizontal: 8,
+    paddingBottom: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   username: {
-    color: '#FFFBEB',
     textAlign: 'center',
     fontWeight: '800',
+    fontFamily: 'WorldCup26',
+    transform: [{ skewY: -12 }],
+    marginBottom: 4,
   },
-  team: {
-    color: '#FDE68A',
+  position: {
     textAlign: 'center',
-  },
-  shine: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '60%',
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    transform: [{ skewY: '-24deg' }],
+    fontWeight: '800',
   },
 });

@@ -18,9 +18,9 @@ export default function WelcomeScreen({ navigation }) {
       <View style={[styles.container, { padding: spacing.xl }]}> 
         <View style={styles.logoBlock}>
           <View style={[styles.logoFrame, { borderColor: colors.primaryDark }]}>
-            <Ionicons name="football" size={74} color="#4A2C00" />
+            <Ionicons name="football" size={74} color={colors.white} />
           </View>
-          <Text style={{ color: colors.text, fontSize: typography.sizes.hero * textScale, fontWeight: typography.weights.bold }}>
+          <Text style={{ color: colors.text, fontSize: typography.sizes.hero * textScale, fontWeight: typography.weights.bold, fontFamily: typography.families.worldCup }}>
             FutbolClips
           </Text>
           <Text style={{ color: colors.primary, fontSize: typography.sizes.lg * textScale }}>
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#16A34A',
     shadowColor: '#000',
     shadowOpacity: 0.35,
     shadowRadius: 12,

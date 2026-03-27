@@ -22,6 +22,7 @@ export default function Header({ title, onBack, rightIcon, onRightPress }) {
           color: colors.text,
           fontWeight: typography.weights.bold,
           fontSize: typography.sizes.lg * textScale,
+          fontFamily: typography.families.worldCup,
         }}
       >
         {title}

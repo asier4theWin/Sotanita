@@ -11,7 +11,7 @@ import AppInput from '../components/AppInput';
 import VideoTile from '../components/VideoTile';
 import { likedVideos, positions, teams, userVideos } from '../utils/mockData';
 
-export default function ProfileScreen({ navigation }) {
+export default function ProfileScreen({ navigation, hideProfileCard = false }) {
   const { user, isLoggedIn, guestMode, logout, updateUser } = useAuth();
   const { colors, spacing, typography, textScale } = useAppTheme();
 
@@ -55,15 +55,17 @@ export default function ProfileScreen({ navigation }) {
           </Pressable>
         </View>
 
-        <View style={{ alignItems: 'center' }}>
-          <FifaCard
-            username={profile.username}
-            team={profile.team}
-            position={profile.position}
-            rating={requireLogin ? 0 : 88}
-            size="large"
-            style={{ shadowColor: colors.primary, shadowOpacity: 0.35, shadowRadius: 16, elevation: 8 }}
-          />
+        <View style={{ alignItems: 'center', minHeight: 246 }}>
+          {!hideProfileCard ? (
+            <FifaCard
+              username={profile.username}
+              team={profile.team}
+              position={profile.position}
+              rating={requireLogin ? 0 : 88}
+              size="xlarge"
+              disableShadow
+            />
+          ) : null}
         </View>
 
         {requireLogin ? (
