@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useAuth } from '../context/AuthContext';
 import { useAppTheme } from '../hooks/useAppTheme';
-import { teams, positions } from '../utils/mockData';
+import { positions } from '../utils/mockData';
+import { getTeamNames } from '../api/backend';
 import { emailRegex } from '../utils/format';
 import AppButton from '../components/AppButton';
 import AppInput from '../components/AppInput';
@@ -37,10 +38,44 @@ export default function RegisterScreen({ navigation }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState({});
   const [focusedPicker, setFocusedPicker] = useState(null);
+  const [teamOptions, setTeamOptions] = useState([]);
+  const [loadingTeams, setLoadingTeams] = useState(false);
+  const [registering, setRegistering] = useState(false);
+  const [serverError, setServerError] = useState('');
 
   const strength = useMemo(() => passwordStrength(form.password), [form.password]);
 
-  const submit = () => {
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadTeams = async () => {
+      setLoadingTeams(true);
+      setServerError('');
+
+      try {
+        const names = await getTeamNames();
+        if (isMounted) {
+          setTeamOptions(names);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setServerError(error.message || 'No se pudieron cargar los equipos');
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingTeams(false);
+        }
+      }
+    };
+
+    loadTeams();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const submit = async () => {
     const next = {};
 
     if (!form.username || form.username.length < 3) next.username = 'Minimo 3 caracteres';
@@ -55,7 +90,16 @@ export default function RegisterScreen({ navigation }) {
       return;
     }
 
-    register(form);
+    setRegistering(true);
+    setServerError('');
+
+    try {
+      await register(form);
+    } catch (error) {
+      setServerError(error.message || 'No se pudo completar el registro');
+    } finally {
+      setRegistering(false);
+    }
   };
 
   return (
@@ -121,12 +165,14 @@ export default function RegisterScreen({ navigation }) {
             onValueChange={(team) => setForm((prev) => ({ ...prev, team }))}
           >
             <Picker.Item label="Selecciona tu equipo" value="" color={colors.textMuted} />
-            {teams.map((team) => (
+            {teamOptions.map((team) => (
               <Picker.Item key={team} label={team} value={team} color="#111827" />
             ))}
           </Picker>
         </View>
         {errors.team ? <Text style={[styles.error, { color: colors.danger }]}>{errors.team}</Text> : null}
+        {loadingTeams ? <Text style={[styles.hint, { color: colors.textMuted }]}>Cargando equipos...</Text> : null}
+        {serverError ? <Text style={[styles.error, { color: colors.danger }]}>{serverError}</Text> : null}
 
         <AppInput
           label="Email"
@@ -187,7 +233,7 @@ export default function RegisterScreen({ navigation }) {
           error={errors.confirmPassword}
         />
 
-        <AppButton title="Registrarse" onPress={submit} style={{ marginTop: spacing.md }} />
+        <AppButton title="Registrarse" onPress={submit} loading={registering} style={{ marginTop: spacing.md }} />
 
         <View style={styles.footer}>
           <Text style={{ color: colors.textMuted, fontSize: typography.sizes.sm * textScale }}>Ya tienes cuenta?</Text>
@@ -218,6 +264,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   error: {
+    fontSize: 12,
+    marginBottom: 12,
+  },
+  hint: {
     fontSize: 12,
     marginBottom: 12,
   },

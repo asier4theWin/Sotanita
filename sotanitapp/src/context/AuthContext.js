@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo, useState } from 'react';
+import { createUser, getTeamIdByName } from '../api/backend';
 
 const AuthContext = createContext(undefined);
 
@@ -18,15 +19,31 @@ export function AuthProvider({ children }) {
     });
   };
 
-  const register = (data) => {
+  const register = async (data) => {
+    const teamId = await getTeamIdByName(data.team);
+
+    const createdUser = await createUser({
+      username: data.username,
+      email: data.email,
+      password: data.password,
+      position: data.position,
+      teamId,
+      teamName: data.team,
+      frameId: data.frameId || 'bronce',
+    });
+
     setIsLoggedIn(true);
     setGuestMode(false);
     setUser({
-      username: data.username,
-      email: data.email,
-      position: data.position,
-      team: data.team,
+      username: createdUser.username,
+      email: createdUser.email,
+      position: createdUser.position,
+      team: createdUser.teamName || data.team,
+      teamId: createdUser.teamId,
+      frameId: createdUser.frameId,
     });
+
+    return createdUser;
   };
 
   const logout = () => {
