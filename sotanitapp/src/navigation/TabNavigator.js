@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { Animated, Easing, FlatList, Image, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -26,6 +26,14 @@ const TAB_CARD_SIZE = { width: 84, height: 120 };
 const PROFILE_CARD_SIZE = { width: 174, height: 246 };
 const PROFILE_CARD_TARGET_TOP = 74;
 
+function buildTabCardSource(value, fallback) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return fallback;
+  if (raw.startsWith('//')) return { uri: `https:${raw}` };
+  if (/^https?:\/\//i.test(raw) || raw.startsWith('data:') || raw.startsWith('file:')) return { uri: raw };
+  return fallback;
+}
+
 export default function TabNavigator() {
   const { user, isLoggedIn } = useAuth();
   const { colors, spacing, typography, textScale, darkMode, highContrast } = useAppTheme();
@@ -45,7 +53,19 @@ export default function TabNavigator() {
     team: isLoggedIn && user?.team ? user.team : 'Sin equipo',
     position: isLoggedIn && user?.position ? user.position : '---',
     rating: isLoggedIn ? 88 : 0,
+    teamImageUrl: isLoggedIn ? user?.teamImageUrl : null,
+    frameImageId: isLoggedIn ? user?.frameImageId : null,
   };
+
+  const profileTabBackgroundSource = useMemo(
+    () => buildTabCardSource(user?.teamImageUrl, tabCardBackground),
+    [user?.teamImageUrl]
+  );
+
+  const profileTabFrameSource = useMemo(
+    () => buildTabCardSource(user?.frameImageId, tabCardFrame),
+    [user?.frameImageId]
+  );
 
   const startAnimationFromProfileTab = (navigation) => {
     if (isProfileAnimating) {
@@ -183,8 +203,8 @@ export default function TabNavigator() {
                     { opacity: focused ? 1 : 0.78 },
                   ]}
                 >
-                  <Image source={tabCardBackground} style={styles.profileCardAsset} resizeMode="stretch" />
-                  <Image source={tabCardFrame} style={styles.profileCardAsset} resizeMode="stretch" />
+                  <Image source={profileTabBackgroundSource} style={styles.profileCardAsset} resizeMode="stretch" />
+                  <Image source={profileTabFrameSource} style={styles.profileCardAsset} resizeMode="stretch" />
                 </View>
               );
             }
@@ -278,6 +298,8 @@ export default function TabNavigator() {
             team={profilePreview.team}
             position={profilePreview.position}
             rating={profilePreview.rating}
+            backgroundUrl={profilePreview.teamImageUrl}
+            frameUrl={profilePreview.frameImageId}
             disableShadow
           />
         </Animated.View>

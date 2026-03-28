@@ -4,12 +4,13 @@ import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useAppTheme } from '../hooks/useAppTheme';
+import { getTeamNames } from '../api/backend';
 import ScreenGradient from '../components/ScreenGradient';
 import FifaCard from '../components/FifaCard';
 import AppButton from '../components/AppButton';
 import AppInput from '../components/AppInput';
 import VideoTile from '../components/VideoTile';
-import { likedVideos, positions, teams, userVideos } from '../utils/mockData';
+import { likedVideos, positions, userVideos } from '../utils/mockData';
 
 export default function ProfileScreen({ navigation, hideProfileCard = false }) {
   const { user, isLoggedIn, guestMode, logout, updateUser } = useAuth();
@@ -19,6 +20,10 @@ export default function ProfileScreen({ navigation, hideProfileCard = false }) {
   const [editingField, setEditingField] = useState(null);
   const [tempValue, setTempValue] = useState('');
   const [focusedPicker, setFocusedPicker] = useState(false);
+  const [teamOptions, setTeamOptions] = useState([]);
+  const [loadingTeams, setLoadingTeams] = useState(false);
+  const [savingChanges, setSavingChanges] = useState(false);
+  const [editError, setEditError] = useState('');
 
   const profile = useMemo(() => {
     if (isLoggedIn && user) {
@@ -32,16 +37,52 @@ export default function ProfileScreen({ navigation, hideProfileCard = false }) {
     };
   }, [isLoggedIn, user]);
 
-  const openEdit = (field) => {
+  const openEdit = async (field) => {
+    setEditError('');
     setEditingField(field);
     setTempValue(profile[field] || '');
+
+    if (field === 'team') {
+      setLoadingTeams(true);
+      try {
+        const names = await getTeamNames();
+        setTeamOptions(names);
+      } catch (error) {
+        console.error('Error cargando equipos:', error);
+      } finally {
+        setLoadingTeams(false);
+      }
+    }
   };
 
-  const saveEdit = () => {
-    if (editingField && tempValue) {
-      updateUser({ [editingField]: tempValue });
+  const saveEdit = async () => {
+    if (!editingField) {
+      return;
     }
-    setEditingField(null);
+
+    const normalizedValue = String(tempValue || '').trim();
+
+    if (!normalizedValue) {
+      setEditError('El valor no puede estar vacio');
+      return;
+    }
+
+    if (editingField === 'username' && normalizedValue.length < 3) {
+      setEditError('El nombre de usuario debe tener al menos 3 caracteres');
+      return;
+    }
+
+    setSavingChanges(true);
+    setEditError('');
+    try {
+      await updateUser({ [editingField]: normalizedValue });
+      setEditingField(null);
+    } catch (error) {
+      setEditError(error.message || 'No se pudo guardar el cambio');
+      console.error('Error guardando cambios:', error);
+    } finally {
+      setSavingChanges(false);
+    }
   };
 
   const requireLogin = !isLoggedIn && guestMode;
@@ -62,6 +103,8 @@ export default function ProfileScreen({ navigation, hideProfileCard = false }) {
               team={profile.team}
               position={profile.position}
               rating={requireLogin ? 0 : 88}
+              backgroundUrl={profile.teamImageUrl}
+              frameUrl={profile.frameImageId}
               size="xlarge"
               disableShadow
             />
@@ -144,7 +187,38 @@ export default function ProfileScreen({ navigation, hideProfileCard = false }) {
             </Text>
 
             {editingField === 'username' ? (
-              <AppInput value={tempValue} onChangeText={setTempValue} placeholder="Nuevo nombre" />
+              <>
+                <AppInput value={tempValue} onChangeText={setTempValue} placeholder="Nuevo nombre" />
+                {editError ? <Text style={[styles.error, { color: colors.danger }]}>{editError}</Text> : null}
+              </>
+            ) : editingField === 'team' ? (
+              <>
+                <View
+                  style={[
+                    styles.pickerWrap,
+                    {
+                      backgroundColor: colors.surfaceElevated,
+                      borderColor: focusedPicker ? colors.primary : colors.border,
+                    },
+                  ]}
+                >
+                  <Picker
+                    selectedValue={tempValue}
+                    style={{ color: colors.text, backgroundColor: 'transparent' }}
+                    itemStyle={{ color: colors.text }}
+                    dropdownIconColor={colors.text}
+                    onFocus={() => setFocusedPicker(true)}
+                    onBlur={() => setFocusedPicker(false)}
+                    onValueChange={setTempValue}
+                  >
+                    <Picker.Item label="Selecciona un equipo" value="" color={colors.textMuted} />
+                    {teamOptions.map((team) => (
+                      <Picker.Item key={team} label={team} value={team} color="#111827" />
+                    ))}
+                  </Picker>
+                </View>
+                {loadingTeams ? <Text style={[styles.hint, { color: colors.textMuted }]}>Cargando equipos...</Text> : null}
+              </>
             ) : (
               <View
                 style={[
@@ -154,7 +228,7 @@ export default function ProfileScreen({ navigation, hideProfileCard = false }) {
                     borderColor: focusedPicker ? colors.primary : colors.border,
                   },
                 ]}
-              > 
+              >
                 <Picker
                   selectedValue={tempValue}
                   style={{ color: colors.text, backgroundColor: 'transparent' }}
@@ -164,16 +238,18 @@ export default function ProfileScreen({ navigation, hideProfileCard = false }) {
                   onBlur={() => setFocusedPicker(false)}
                   onValueChange={setTempValue}
                 >
-                  {(editingField === 'team' ? teams : positions).map((item) => (
+                  {positions.map((item) => (
                     <Picker.Item key={item} label={item} value={item} color="#111827" />
                   ))}
                 </Picker>
               </View>
             )}
 
+            {editingField !== 'username' && editError ? <Text style={[styles.error, { color: colors.danger }]}>{editError}</Text> : null}
+
             <View style={styles.modalActions}>
               <AppButton title="Cancelar" variant="secondary" onPress={() => setEditingField(null)} style={{ flex: 1 }} />
-              <AppButton title="Guardar" onPress={saveEdit} style={{ flex: 1 }} />
+              <AppButton title="Guardar" onPress={saveEdit} loading={savingChanges} style={{ flex: 1 }} />
             </View>
           </Pressable>
         </Pressable>
@@ -257,5 +333,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginTop: 6,
+  },
+  hint: {
+    fontSize: 12,
+    marginBottom: 12,
+  },
+  error: {
+    fontSize: 12,
+    marginBottom: 12,
   },
 });

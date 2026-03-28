@@ -87,6 +87,8 @@ export default function MyVideosScreen({ navigation, route }) {
             username={user?.username || activeVideo.user}
             team={user?.team || activeVideo.team}
             position={user?.position || activeVideo.position}
+            backgroundUrl={user?.teamImageUrl}
+            frameUrl={user?.frameImageId}
           />
 
           <Pressable onPress={() => setLiked((prev) => !prev)} style={styles.actionWrap}>

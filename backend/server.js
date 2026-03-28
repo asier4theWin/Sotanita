@@ -1,5 +1,5 @@
 const express = require('express');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const { z } = require('zod');
@@ -49,6 +49,54 @@ function extractDocId(doc) {
     if (typeof doc._id === 'string' && doc._id) return doc._id;
     if (doc._id && typeof doc._id.toString === 'function') return doc._id.toString();
     return null;
+}
+
+function buildIdCandidates(id) {
+    const normalized = String(id || '').trim();
+    if (!normalized) return [];
+
+    const candidates = [normalized];
+    if (ObjectId.isValid(normalized)) {
+        candidates.push(new ObjectId(normalized));
+    }
+
+    return candidates;
+}
+
+function buildIdFilter(id) {
+    const normalized = String(id || '').trim();
+    if (!normalized) return { _id: null };
+
+    const candidates = [normalized];
+    if (ObjectId.isValid(normalized)) {
+        candidates.push(new ObjectId(normalized));
+    }
+
+    return candidates.length === 1 ? { _id: candidates[0] } : { _id: { $in: candidates } };
+}
+
+function normalizeImageUrl(value) {
+    const raw = String(value ?? '').trim();
+    if (!raw) return null;
+    if (raw.startsWith('//')) return `https:${raw}`;
+    return raw;
+}
+
+async function resolveCardData(teamId, frameId) {
+    const [teamDoc, frameDoc] = await Promise.all([
+        teamId ? db.collection('fondo').findOne(buildIdFilter(teamId)) : Promise.resolve(null),
+        frameId ? db.collection('marco').findOne(buildIdFilter(frameId)) : Promise.resolve(null),
+    ]);
+
+    return {
+        teamDoc,
+        frameDoc,
+        teamName: teamDoc ? (teamDoc.name ?? teamDoc.Name ?? null) : null,
+        teamImageUrl: teamDoc ? normalizeImageUrl(teamDoc.imageUrl) : null,
+        frameImageId: frameDoc ? normalizeImageUrl(frameDoc.imageId) : null,
+        resolvedTeamId: teamDoc ? extractDocId(teamDoc) : teamId,
+        resolvedFrameId: frameDoc ? extractDocId(frameDoc) : frameId,
+    };
 }
 
 async function handleGetNombresEquipos(req, res) {
@@ -113,21 +161,31 @@ async function handleCreateUser(req, res) {
 
     try {
         const { username, email, password, position, frameId, teamId: inputTeamId, teamName } = parsed.data;
+        const normalizedUsername = username.trim();
 
         const existing = await db.collection('perfiles').findOne({ email: email.toLowerCase() });
         if (existing) {
             return res.status(409).json({ message: 'Ya existe un usuario con ese email' });
         }
 
+        const existingUsername = await db.collection('perfiles').findOne(
+            { username: normalizedUsername },
+            { collation: { locale: 'es', strength: 2 } }
+        );
+        if (existingUsername) {
+            return res.status(409).json({ message: 'Ese nombre de usuario no esta disponible' });
+        }
+
         let teamId = inputTeamId;
         let resolvedTeamName = teamName;
 
         if (teamId) {
-            const teamById = await db.collection('fondo').findOne({ _id: teamId });
+            const teamById = await db.collection('fondo').findOne(buildIdFilter(teamId));
             if (!teamById) {
                 return res.status(404).json({ message: 'teamId no existe en fondo' });
             }
-            resolvedTeamName = teamById.name;
+            teamId = extractDocId(teamById);
+            resolvedTeamName = teamById.name ?? teamById.Name;
         }
 
         if (!teamId && teamName) {
@@ -145,35 +203,50 @@ async function handleCreateUser(req, res) {
             return res.status(400).json({ message: 'Debe enviarse teamId o teamName valido' });
         }
 
-        const frameDoc = await db.collection('marco').findOne({ _id: frameId });
+        const frameDoc = await db.collection('marco').findOne(buildIdFilter(frameId));
         if (!frameDoc) {
             return res.status(404).json({ message: 'frameId no existe en marco' });
         }
 
+        const resolvedFrameId = extractDocId(frameDoc);
+
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const userDoc = {
-            username: username.trim(),
+            username: normalizedUsername,
             email: email.toLowerCase().trim(),
             password: hashedPassword,
             position: position.trim(),
             teamId,
-            frameId,
+            frameId: resolvedFrameId,
             createdAt: new Date(),
         };
 
         const result = await db.collection('perfiles').insertOne(userDoc);
+        const persistedUser = await db.collection('perfiles').findOne({ _id: result.insertedId });
+
+        if (!persistedUser) {
+            return res.status(500).json({ message: 'No se pudo confirmar la creacion del usuario en base de datos' });
+        }
+
+        const cardData = await resolveCardData(persistedUser.teamId, persistedUser.frameId);
 
         return res.status(201).json({
-            id: result.insertedId.toString(),
-            username: userDoc.username,
-            email: userDoc.email,
-            position: userDoc.position,
-            teamId: userDoc.teamId,
-            teamName: resolvedTeamName,
-            frameId: userDoc.frameId,
+            id: persistedUser._id.toString(),
+            username: persistedUser.username,
+            email: persistedUser.email,
+            position: persistedUser.position,
+            teamId: cardData.resolvedTeamId,
+            teamName: cardData.teamName ?? resolvedTeamName,
+            teamImageUrl: cardData.teamImageUrl,
+            frameId: cardData.resolvedFrameId,
+            frameImageId: cardData.frameImageId,
+            frameImageUrl: cardData.frameImageId,
         });
     } catch (err) {
+        if (err?.code === 11000 && (String(err?.message || '').includes('username') || err?.keyPattern?.username)) {
+            return res.status(409).json({ message: 'Ese nombre de usuario no esta disponible' });
+        }
         console.error('❌ Error en POST /api/usuarios', err.message);
         return res.status(500).json({ message: 'Error creando usuario' });
     }
@@ -182,11 +255,164 @@ async function handleCreateUser(req, res) {
 app.post('/api/usuarios', handleCreateUser);
 app.post('/api/crearNuevoUsuario', handleCreateUser);
 
+async function handleUpdateUser(req, res) {
+    const { id } = req.params;
+    const { username, teamId, teamName, position } = req.body;
+
+    if (!id) {
+        return res.status(400).json({ message: 'El id del usuario es obligatorio' });
+    }
+
+    try {
+        const updateData = {};
+
+        if (username) {
+            const normalizedUsername = String(username).trim();
+
+            if (normalizedUsername.length < 3) {
+                return res.status(400).json({ message: 'El nombre de usuario debe tener al menos 3 caracteres' });
+            }
+
+            const idCandidates = buildIdCandidates(id);
+            const existingUsername = await db.collection('perfiles').findOne(
+                {
+                    username: normalizedUsername,
+                    _id: { $nin: idCandidates },
+                },
+                { collation: { locale: 'es', strength: 2 } }
+            );
+
+            if (existingUsername) {
+                return res.status(409).json({ message: 'Ese nombre de usuario no esta disponible' });
+            }
+
+            updateData.username = normalizedUsername;
+        }
+
+        if (teamName) {
+            const teamDoc = await db.collection('fondo').findOne({
+                $or: [{ name: buildNameRegex(teamName) }, { Name: buildNameRegex(teamName) }],
+            });
+
+            if (!teamDoc) {
+                return res.status(404).json({ message: 'Equipo no encontrado' });
+            }
+
+            updateData.teamId = extractDocId(teamDoc);
+        } else if (teamId) {
+            const teamDoc = await db.collection('fondo').findOne(buildIdFilter(teamId));
+            if (!teamDoc) {
+                return res.status(404).json({ message: 'Equipo no encontrado' });
+            }
+            updateData.teamId = extractDocId(teamDoc);
+        }
+
+        if (position) {
+            updateData.position = position.trim();
+        }
+
+        if (!Object.keys(updateData).length) {
+            return res.status(400).json({ message: 'No hay campos para actualizar' });
+        }
+
+        const result = await db.collection('perfiles').findOneAndUpdate(
+            buildIdFilter(id),
+            { $set: updateData },
+            { returnDocument: 'after' }
+        );
+
+        const updatedUser = result?.value ?? result;
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        const cardData = await resolveCardData(updatedUser.teamId, updatedUser.frameId);
+
+        return res.json({
+            id: extractDocId(updatedUser),
+            username: updatedUser.username,
+            email: updatedUser.email,
+            position: updatedUser.position,
+            teamId: cardData.resolvedTeamId,
+            teamName: cardData.teamName,
+            teamImageUrl: cardData.teamImageUrl,
+            frameId: cardData.resolvedFrameId,
+            frameImageId: cardData.frameImageId,
+            frameImageUrl: cardData.frameImageId,
+        });
+    } catch (err) {
+        if (err?.code === 11000 && (String(err?.message || '').includes('username') || err?.keyPattern?.username)) {
+            return res.status(409).json({ message: 'Ese nombre de usuario no esta disponible' });
+        }
+        console.error('❌ Error en PUT /api/usuarios/:id', err.message);
+        return res.status(500).json({ message: 'Error actualizando usuario' });
+    }
+}
+
+app.put('/api/usuarios/:id', handleUpdateUser);
+
+async function handleLogin(req, res) {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Email y contraseña son obligatorios' });
+    }
+
+    try {
+        const user = await db.collection('perfiles').findOne({ email: email.toLowerCase().trim() });
+
+        if (!user) {
+            return res.status(401).json({ message: 'Credenciales invalidas' });
+        }
+
+        const passwordMatch = await bcrypt.compare(password, user.password);
+
+        if (!passwordMatch) {
+            return res.status(401).json({ message: 'Credenciales invalidas' });
+        }
+
+        const cardData = await resolveCardData(user.teamId, user.frameId);
+
+        return res.json({
+            id: user._id.toString(),
+            username: user.username,
+            email: user.email,
+            position: user.position,
+            teamId: cardData.resolvedTeamId,
+            teamName: cardData.teamName ?? 'Sin equipo',
+            teamImageUrl: cardData.teamImageUrl,
+            frameId: cardData.resolvedFrameId,
+            frameImageId: cardData.frameImageId,
+            frameImageUrl: cardData.frameImageId,
+        });
+    } catch (err) {
+        console.error('❌ Error en POST /api/login', err.message);
+        return res.status(500).json({ message: 'Error en el servidor' });
+    }
+}
+
+app.post('/api/login', handleLogin);
+
 async function startServer() {
     try {
         await client.connect();
         await client.db("admin").command({ ping: 1 });
         db = client.db(DB_NAME);
+
+        try {
+            await db.collection('perfiles').createIndex(
+                { username: 1 },
+                {
+                    unique: true,
+                    collation: { locale: 'es', strength: 2 },
+                    partialFilterExpression: { username: { $type: 'string' } },
+                }
+            );
+        } catch (indexErr) {
+            console.error('⚠️ No se pudo crear indice unico para username:', indexErr.message);
+        }
+
         console.log("🔥 Conectado a MongoDB Atlas");
         app.listen(PORT, () => console.log(`🚀 Servidor en puerto ${PORT}`));
     } catch (err) {

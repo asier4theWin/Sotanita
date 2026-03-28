@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useAppTheme } from '../hooks/useAppTheme';
 import { emailRegex } from '../utils/format';
@@ -16,8 +16,10 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
+  const [loggingIn, setLoggingIn] = useState(false);
+  const [serverError, setServerError] = useState('');
 
-  const onSubmit = () => {
+  const onSubmit = async () => {
     const next = {};
 
     if (!emailRegex.test(email)) {
@@ -32,13 +34,23 @@ export default function LoginScreen({ navigation }) {
       return;
     }
 
-    login(email, password);
+    setLoggingIn(true);
+    setServerError('');
+
+    try {
+      await login(email, password);
+      navigation.replace('Home');
+    } catch (error) {
+      setServerError(error.message || 'No se pudo iniciar sesion');
+    } finally {
+      setLoggingIn(false);
+    }
   };
 
   return (
     <ScreenGradient>
       <Header title="Iniciar sesion" onBack={() => navigation.goBack()} />
-      <View style={[styles.content, { padding: spacing.xl }]}> 
+      <ScrollView contentContainerStyle={[styles.content, { padding: spacing.xl }]}>
         <View style={{ marginBottom: spacing.xl }}>
           <Text style={{ color: colors.textMuted, fontSize: typography.sizes.md * textScale }}>Bienvenido de vuelta</Text>
         </View>
@@ -63,7 +75,9 @@ export default function LoginScreen({ navigation }) {
           error={errors.password}
         />
 
-        <AppButton title="Iniciar sesion" onPress={onSubmit} style={{ marginTop: spacing.md }} />
+        {serverError ? <Text style={[styles.error, { color: colors.danger }]}>{serverError}</Text> : null}
+
+        <AppButton title="Iniciar sesion" onPress={onSubmit} loading={loggingIn} style={{ marginTop: spacing.md }} />
 
         <View style={styles.footer}>
           <Text style={{ color: colors.textMuted, fontSize: typography.sizes.sm * textScale }}>No tienes cuenta?</Text>
@@ -73,15 +87,16 @@ export default function LoginScreen({ navigation }) {
             </Text>
           </Pressable>
         </View>
-      </View>
+      </ScrollView>
     </ScreenGradient>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
+    paddingBottom: 32,
   },
   footer: {
     marginTop: 20,
@@ -89,5 +104,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
+  },
+  error: {
+    fontSize: 12,
+    marginBottom: 12,
   },
 });

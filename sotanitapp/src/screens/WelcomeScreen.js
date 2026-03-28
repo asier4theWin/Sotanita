@@ -1,9 +1,10 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useAppTheme } from '../hooks/useAppTheme';
 import ScreenGradient from '../components/ScreenGradient';
 import AppButton from '../components/AppButton';
+
+const appLogo = require('../../assets/LOGO.png');
 
 export default function WelcomeScreen({ navigation }) {
   const { enterAsGuest } = useAuth();
@@ -17,14 +18,12 @@ export default function WelcomeScreen({ navigation }) {
     <ScreenGradient>
       <View style={[styles.container, { padding: spacing.xl }]}> 
         <View style={styles.logoBlock}>
-          <View style={[styles.logoFrame, { borderColor: colors.primaryDark }]}>
-            <Ionicons name="football" size={74} color={colors.white} />
-          </View>
+          <Image source={appLogo} style={styles.logoImage} resizeMode="contain" />
           <Text style={{ color: colors.text, fontSize: typography.sizes.hero * textScale, fontWeight: typography.weights.bold, fontFamily: typography.families.worldCup }}>
-            FutbolClips
+            AMANTES DEL MAL FUTBOL
           </Text>
           <Text style={{ color: colors.primary, fontSize: typography.sizes.lg * textScale }}>
-            Comparte tus mejores jugadas
+            Cuando las jugadas están bien... pa no verlas.
           </Text>
         </View>
 
@@ -53,20 +52,10 @@ const styles = StyleSheet.create({
     marginBottom: 52,
     gap: 8,
   },
-  logoFrame: {
-    width: 132,
-    height: 132,
-    borderRadius: 28,
-    borderWidth: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
+  logoImage: {
+    width: 200,
+    height: 200,
     marginBottom: 10,
-    backgroundColor: '#16A34A',
-    shadowColor: '#000',
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 8,
   },
   actions: {
     gap: 14,

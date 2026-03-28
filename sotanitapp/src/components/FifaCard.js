@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { useAppTheme } from '../hooks/useAppTheme';
 
@@ -11,6 +12,14 @@ const sizes = {
   xlarge: { width: 174, height: 246, title: 19, subtitle: 13, rating: 22, position: 12, topPad: 13 },
 };
 
+function normalizeRemoteUri(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return null;
+  if (raw.startsWith('//')) return `https:${raw}`;
+  if (/^https?:\/\//i.test(raw) || raw.startsWith('data:') || raw.startsWith('file:')) return raw;
+  return null;
+}
+
 export default function FifaCard({
   username,
   team,
@@ -18,10 +27,18 @@ export default function FifaCard({
   rating = 85,
   size = 'medium',
   disableShadow = false,
+  backgroundUrl,
+  frameUrl,
   style,
 }) {
   const { colors } = useAppTheme();
   const current = sizes[size] || sizes.medium;
+  const [backgroundLoadFailed, setBackgroundLoadFailed] = useState(false);
+  const [frameLoadFailed, setFrameLoadFailed] = useState(false);
+  const normalizedBackgroundUrl = useMemo(() => normalizeRemoteUri(backgroundUrl), [backgroundUrl]);
+  const normalizedFrameUrl = useMemo(() => normalizeRemoteUri(frameUrl), [frameUrl]);
+  const backgroundSource = normalizedBackgroundUrl && !backgroundLoadFailed ? { uri: normalizedBackgroundUrl } : cardBackground;
+  const frameSource = normalizedFrameUrl && !frameLoadFailed ? { uri: normalizedFrameUrl } : cardFrame;
 
   return (
     <View
@@ -35,7 +52,12 @@ export default function FifaCard({
         style,
       ]}
     >
-      <Image source={cardBackground} style={styles.assetLayer} resizeMode="stretch" />
+      <Image
+        source={backgroundSource}
+        style={styles.assetLayer}
+        resizeMode="stretch"
+        onError={() => setBackgroundLoadFailed(true)}
+      />
 
       <View style={[styles.contentLayer, { paddingTop: current.topPad }]}> 
         <View style={styles.footer}>
@@ -48,7 +70,12 @@ export default function FifaCard({
         </View>
       </View>
 
-      <Image source={cardFrame} style={styles.assetLayer} resizeMode="stretch" />
+      <Image
+        source={frameSource}
+        style={styles.assetLayer}
+        resizeMode="stretch"
+        onError={() => setFrameLoadFailed(true)}
+      />
     </View>
   );
 }
