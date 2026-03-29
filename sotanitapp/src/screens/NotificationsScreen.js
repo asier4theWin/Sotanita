@@ -1,11 +1,16 @@
+import { useRef } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { useAppTheme } from '../hooks/useAppTheme';
+import useResetScrollOnFocus from '../hooks/useResetScrollOnFocus';
 import ScreenGradient from '../components/ScreenGradient';
 import NotificationItem from '../components/NotificationItem';
 import { notifications } from '../utils/mockData';
 
 export default function NotificationsScreen() {
   const { colors, spacing, typography, textScale } = useAppTheme();
+  const listRef = useRef(null);
+
+  useResetScrollOnFocus(listRef);
 
   return (
     <ScreenGradient>
@@ -16,6 +21,7 @@ export default function NotificationsScreen() {
       </View>
 
       <FlatList
+        ref={listRef}
         data={notifications}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={{ padding: spacing.md }}

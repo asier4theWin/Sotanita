@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useAppTheme } from '../hooks/useAppTheme';
+import useResetScrollOnFocus from '../hooks/useResetScrollOnFocus';
 import { emailRegex } from '../utils/format';
 import AppButton from '../components/AppButton';
 import AppInput from '../components/AppInput';
@@ -18,6 +19,9 @@ export default function LoginScreen({ navigation }) {
   const [errors, setErrors] = useState({});
   const [loggingIn, setLoggingIn] = useState(false);
   const [serverError, setServerError] = useState('');
+  const scrollRef = useRef(null);
+
+  useResetScrollOnFocus(scrollRef);
 
   const onSubmit = async () => {
     const next = {};
@@ -49,8 +53,14 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <ScreenGradient>
-      <Header title="Iniciar sesion" onBack={() => navigation.goBack()} />
-      <ScrollView contentContainerStyle={[styles.content, { padding: spacing.xl }]}>
+      <Header
+        title="Iniciar sesion"
+        titleSize="xxl"
+        titleScale={1.3}
+        titleStyle={{ transform: [{ scaleY: 1.12 }], letterSpacing: -0.8 }}
+        onBack={() => navigation.goBack()}
+      />
+      <ScrollView ref={scrollRef} contentContainerStyle={[styles.content, { padding: spacing.xl }]}>
         <View style={{ marginBottom: spacing.xl }}>
           <Text style={{ color: colors.textMuted, fontSize: typography.sizes.md * textScale }}>Bienvenido de vuelta</Text>
         </View>

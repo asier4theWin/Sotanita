@@ -1,20 +1,25 @@
+import { useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettings } from '../context/SettingsContext';
 import { useAppTheme } from '../hooks/useAppTheme';
+import useResetScrollOnFocus from '../hooks/useResetScrollOnFocus';
 import ScreenGradient from '../components/ScreenGradient';
 import Header from '../components/Header';
 
 export default function SettingsScreen({ navigation }) {
   const { highContrast, darkMode, fontSize, toggleHighContrast, toggleDarkMode, setFontSize } = useSettings();
   const { colors, spacing, typography, textScale } = useAppTheme();
+  const scrollRef = useRef(null);
+
+  useResetScrollOnFocus(scrollRef);
 
   return (
     <ScreenGradient>
       <Header title="Configuracion" onBack={() => navigation.goBack()} />
 
-      <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 30 }}>
+      <ScrollView ref={scrollRef} contentContainerStyle={{ padding: spacing.xl, paddingBottom: 30 }}>
         <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
           <Text style={{ color: colors.primary, fontWeight: typography.weights.bold, fontSize: typography.sizes.lg * textScale, marginBottom: spacing.md }}>
             Apariencia

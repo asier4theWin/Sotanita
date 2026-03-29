@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useAuth } from '../context/AuthContext';
 import { useAppTheme } from '../hooks/useAppTheme';
+import useResetScrollOnFocus from '../hooks/useResetScrollOnFocus';
 import { positions } from '../utils/mockData';
 import { getTeamNames } from '../api/backend';
 import { emailRegex } from '../utils/format';
@@ -42,6 +43,9 @@ export default function RegisterScreen({ navigation }) {
   const [loadingTeams, setLoadingTeams] = useState(false);
   const [registering, setRegistering] = useState(false);
   const [serverError, setServerError] = useState('');
+  const scrollRef = useRef(null);
+
+  useResetScrollOnFocus(scrollRef);
 
   const strength = useMemo(() => passwordStrength(form.password), [form.password]);
 
@@ -104,8 +108,14 @@ export default function RegisterScreen({ navigation }) {
 
   return (
     <ScreenGradient>
-      <Header title="Crear cuenta" onBack={() => navigation.goBack()} />
-      <ScrollView contentContainerStyle={[styles.scrollContent, { padding: spacing.xl }]}>
+      <Header
+        title="Crear cuenta"
+        titleSize="xxl"
+        titleScale={1.3}
+        titleStyle={{ transform: [{ scaleY: 1.12 }], letterSpacing: -0.8 }}
+        onBack={() => navigation.goBack()}
+      />
+      <ScrollView ref={scrollRef} contentContainerStyle={[styles.scrollContent, { padding: spacing.xl }]}>
         <Text style={{ color: colors.textMuted, fontSize: typography.sizes.md * textScale, marginBottom: spacing.xl }}>
           Unete a la comunidad
         </Text>

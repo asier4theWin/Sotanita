@@ -22,6 +22,7 @@ const closeButtonContrast = require('../../assets/botonX/contrast.png');
 const TAB_BAR_HEIGHT = 68;
 const TAB_BAR_VERTICAL_PADDING = 8;
 const TAB_CARD_TRANSLATE_Y = -34;
+const TAB_CARD_DOCK_OFFSET_Y = -6;
 const TAB_CARD_SIZE = { width: 84, height: 120 };
 const PROFILE_CARD_SIZE = { width: 174, height: 246 };
 const PROFILE_CARD_TARGET_TOP = 74;
@@ -137,7 +138,8 @@ export default function TabNavigator() {
     TAB_BAR_HEIGHT +
     TAB_BAR_VERTICAL_PADDING +
     (tabContentHeight - TAB_CARD_SIZE.height) / 2 +
-    TAB_CARD_TRANSLATE_Y;
+    TAB_CARD_TRANSLATE_Y +
+    TAB_CARD_DOCK_OFFSET_Y;
   const startX = tabStartLeft - (PROFILE_CARD_SIZE.width * (1 - initialScale)) / 2;
   const startY = tabStartTop - (PROFILE_CARD_SIZE.height * (1 - initialScale)) / 2;
   const targetX = width / 2 - PROFILE_CARD_SIZE.width / 2;

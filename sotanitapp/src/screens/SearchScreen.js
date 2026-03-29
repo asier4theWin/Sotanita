@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useAppTheme } from '../hooks/useAppTheme';
+import useResetScrollOnFocus from '../hooks/useResetScrollOnFocus';
 import ScreenGradient from '../components/ScreenGradient';
 import Header from '../components/Header';
 import AppButton from '../components/AppButton';
@@ -15,12 +16,15 @@ export default function SearchScreen({ navigation }) {
   const [category, setCategory] = useState('Todos');
   const [sortBy, setSortBy] = useState('Mas recientes');
   const [focusedPicker, setFocusedPicker] = useState(null);
+  const scrollRef = useRef(null);
+
+  useResetScrollOnFocus(scrollRef);
 
   return (
     <ScreenGradient>
       <Header title="Busqueda" onBack={() => navigation.goBack()} />
 
-      <ScrollView contentContainerStyle={{ padding: spacing.xl }}>
+      <ScrollView ref={scrollRef} contentContainerStyle={{ padding: spacing.xl }}>
         <View style={[styles.panel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={{ color: colors.text, fontWeight: typography.weights.bold, fontSize: typography.sizes.lg * textScale, marginBottom: spacing.md }}>
             Busqueda Avanzada

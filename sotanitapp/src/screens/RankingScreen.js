@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../hooks/useAppTheme';
+import useResetScrollOnFocus from '../hooks/useResetScrollOnFocus';
 import ScreenGradient from '../components/ScreenGradient';
 import FifaCard from '../components/FifaCard';
 import { rankingByCategory } from '../utils/mockData';
@@ -13,12 +14,15 @@ export default function RankingScreen() {
   const { colors, spacing, typography, textScale } = useAppTheme();
   const [category, setCategory] = useState('Goles');
   const [showPicker, setShowPicker] = useState(false);
+  const scrollRef = useRef(null);
+
+  useResetScrollOnFocus(scrollRef);
 
   const ranking = rankingByCategory[category];
 
   return (
     <ScreenGradient>
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView ref={scrollRef} contentContainerStyle={{ paddingBottom: 40 }}>
         <View style={[styles.header, { borderBottomColor: colors.border, padding: spacing.md }]}> 
           <Pressable onPress={() => setShowPicker(true)} style={[styles.categoryBtn, { backgroundColor: colors.surface }]}> 
             <Text style={{ color: colors.text, fontWeight: typography.weights.bold, fontSize: typography.sizes.lg * textScale }}>{category}</Text>

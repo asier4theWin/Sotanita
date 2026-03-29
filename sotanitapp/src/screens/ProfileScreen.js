@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useAppTheme } from '../hooks/useAppTheme';
+import useResetScrollOnFocus from '../hooks/useResetScrollOnFocus';
 import { getTeamNames } from '../api/backend';
 import ScreenGradient from '../components/ScreenGradient';
 import FifaCard from '../components/FifaCard';
@@ -24,6 +25,9 @@ export default function ProfileScreen({ navigation, hideProfileCard = false }) {
   const [loadingTeams, setLoadingTeams] = useState(false);
   const [savingChanges, setSavingChanges] = useState(false);
   const [editError, setEditError] = useState('');
+  const scrollRef = useRef(null);
+
+  useResetScrollOnFocus(scrollRef);
 
   const profile = useMemo(() => {
     if (isLoggedIn && user) {
@@ -89,7 +93,7 @@ export default function ProfileScreen({ navigation, hideProfileCard = false }) {
 
   return (
     <ScreenGradient>
-      <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView ref={scrollRef} contentContainerStyle={{ paddingBottom: 120 }}>
         <View style={[styles.topActions, { padding: spacing.md }]}> 
           <Pressable onPress={() => navigation.navigate('Settings')} style={[styles.iconBtn, { backgroundColor: colors.surface }]}> 
             <Ionicons name="settings" size={20} color={colors.primary} />

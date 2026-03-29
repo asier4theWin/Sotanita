@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../hooks/useAppTheme';
+import useResetScrollOnFocus from '../hooks/useResetScrollOnFocus';
 import ScreenGradient from '../components/ScreenGradient';
 import Header from '../components/Header';
 import AppInput from '../components/AppInput';
@@ -18,12 +19,21 @@ export default function UploadScreen({ navigation }) {
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [focusedPicker, setFocusedPicker] = useState(false);
+  const scrollRef = useRef(null);
+
+  useResetScrollOnFocus(scrollRef);
 
   return (
     <ScreenGradient>
-      <Header title="Subir video" onBack={() => navigation.goBack()} />
+      <Header
+        title="Subir video"
+        titleSize="xxl"
+        titleScale={1.3}
+        titleStyle={{ transform: [{ scaleY: 1.12 }], letterSpacing: -0.8 }}
+        onBack={() => navigation.goBack()}
+      />
 
-      <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 30 }}>
+      <ScrollView ref={scrollRef} contentContainerStyle={{ padding: spacing.xl, paddingBottom: 30 }}>
         <View style={{ marginBottom: spacing.lg }}>
           {!videoFile ? (
             <Pressable
