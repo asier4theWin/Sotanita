@@ -43,7 +43,7 @@ export default function LoginScreen({ navigation }) {
 
     try {
       await login(email, password);
-      navigation.replace('Home');
+      // navigation.replace('Home'); // Manejado por AppNavigator condicionalmente
     } catch (error) {
       setServerError(error.message || 'No se pudo iniciar sesion');
     } finally {

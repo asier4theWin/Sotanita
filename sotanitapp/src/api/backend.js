@@ -81,3 +81,8 @@ export async function uploadVideo(formData) {
 
   return parseResponse(response);
 }
+
+export async function getVideos(limit = 10, offset = 0) {
+  const response = await fetch(buildApiUrl(`/api/videos?limit=${limit}&offset=${offset}`));
+  return parseResponse(response);
+}

@@ -74,6 +74,30 @@ app.post('/api/videos', upload.single('file'), async (req, res) => {
     }
 });
 
+// --- Get Videos Route ---
+app.get('/api/videos', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 10;
+        const offset = parseInt(req.query.offset) || 0;
+
+        const videos = await db.collection('videos')
+            .find({})
+            .sort({ createdAt: -1 })
+            .skip(offset)
+            .limit(limit)
+            .toArray();
+
+        res.json(videos.map(v => ({
+            ...v,
+            id: v._id.toString(),
+            _id: undefined
+        })));
+    } catch (error) {
+        console.error('Error al obtener videos:', error);
+        res.status(500).json({ error: 'Error interno del servidor', details: error.message });
+    }
+});
+
 const mongoUri = process.env.MONGO_URI;
 
 if (!mongoUri) {
