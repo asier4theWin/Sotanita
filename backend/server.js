@@ -3,11 +3,76 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const { z } = require('zod');
+const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+const sqlite3 = require('sqlite3').verbose();
+const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// --- Cloudinary Config ---
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+const upload = multer({ dest: 'uploads/' });
+
+// --- Upload Route ---
+app.post('/api/videos', upload.single('file'), async (req, res) => {
+    try {
+        const { title, category, description, id_usuario } = req.body;
+        const file = req.file;
+
+        if (!file || !title || !category || !id_usuario) {
+            if (file) fs.unlinkSync(file.path);
+            return res.status(400).json({ error: 'Faltan campos obligatorios' });
+        }
+
+        // Subir a Cloudinary
+        const result = await cloudinary.uploader.upload(file.path, {
+            resource_type: 'auto',
+            folder: 'videos_app'
+        });
+
+        // Eliminar archivo temporal
+        fs.unlinkSync(file.path);
+
+        const secure_url = result.secure_url;
+
+        // Guardar en MongoDB
+        const videoDoc = {
+            url: secure_url,
+            title,
+            category,
+            description,
+            id_usuario,
+            likes: 0,
+            createdAt: new Date()
+        };
+
+        const insertResult = await db.collection('videos').insertOne(videoDoc);
+
+        res.status(201).json({
+            id: insertResult.insertedId.toString(),
+            url: secure_url,
+            title,
+            category,
+            description,
+            id_usuario,
+            likes: 0,
+            createdAt: videoDoc.createdAt.toISOString()
+        });
+
+    } catch (error) {
+        console.error('Error al subir video:', error);
+        res.status(500).json({ error: 'Error interno del servidor', details: error.message });
+    }
+});
 
 const mongoUri = process.env.MONGO_URI;
 

@@ -15,7 +15,7 @@ async function parseResponse(response) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const message = data?.message || `Error HTTP ${response.status}`;
+    const message = data?.message || data?.error || `Error HTTP ${response.status}`;
     throw new Error(message);
   }
 
@@ -66,6 +66,17 @@ export async function loginUser(email, password) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ email, password }),
+  });
+
+  return parseResponse(response);
+}
+
+export async function uploadVideo(formData) {
+  const response = await fetch(buildApiUrl('/api/videos'), {
+    method: 'POST',
+    body: formData,
+    // Note: Do NOT set 'Content-Type': 'multipart/form-data'.
+    // Fetch automatically sets it with the correct boundary when body is FormData.
   });
 
   return parseResponse(response);
