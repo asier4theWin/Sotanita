@@ -1,14 +1,15 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View, ActivityIndicator, RefreshControl } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Video, ResizeMode, Audio } from 'expo-av';
 import { useAppTheme } from '../hooks/useAppTheme';
-import { getVideos } from '../api/backend';
+import { getVideos, likeVideo, unlikeVideo } from '../api/backend';
+import { useAuth } from '../context/AuthContext';
 import { formatLikes } from '../utils/format';
 
-const FeedVideoItem = ({ video, isActive, height }) => {
+const FeedVideoItem = ({ video, isActive, height, onLikePress, liking }) => {
   const { colors, typography, textScale, spacing } = useAppTheme();
   const videoRef = useRef(null);
 
@@ -79,9 +80,9 @@ const FeedVideoItem = ({ video, isActive, height }) => {
       </View>
 
       <View style={[styles.sideActions, { bottom: spacing.xxl }]}>
-        <Pressable style={styles.actionWrap}>
+        <Pressable style={styles.actionWrap} onPress={() => onLikePress(video)} disabled={liking}>
           <View style={[styles.actionCircle, { backgroundColor: `${colors.black}88` }]}>
-            <Ionicons name="heart-outline" size={28} color={colors.white} />
+            <Ionicons name={video.hasLiked ? 'heart' : 'heart-outline'} size={28} color={video.hasLiked ? '#ef4444' : colors.white} />
           </View>
           <Text style={styles.actionText}>{formatLikes(video.likes || 0)}</Text>
         </Pressable>
@@ -107,6 +108,7 @@ const FeedVideoItem = ({ video, isActive, height }) => {
 export default function HomeScreen({ navigation }) {
   const { colors } = useAppTheme();
   const isFocused = useIsFocused();
+  const { user, isLoggedIn } = useAuth();
   
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -114,6 +116,7 @@ export default function HomeScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [likingVideoId, setLikingVideoId] = useState(null);
   
   const [activeIndex, setActiveIndex] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
@@ -128,8 +131,16 @@ export default function HomeScreen({ navigation }) {
     try {
       const limit = 5;
       const data = await getVideos(limit, 0);
+      const currentUserId = String(user?.email || '').trim().toLowerCase();
+      const normalizedData = data.map((video) => {
+        const likedBy = Array.isArray(video.likedBy) ? video.likedBy.map((value) => String(value).toLowerCase()) : [];
+        return {
+          ...video,
+          hasLiked: currentUserId ? likedBy.includes(currentUserId) : false,
+        };
+      });
 
-      setVideos(data);
+      setVideos(normalizedData);
       setActiveIndex(0);
       activeIndexRef.current = 0;
 
@@ -148,7 +159,7 @@ export default function HomeScreen({ navigation }) {
       loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, []);
+  }, [user?.email]);
 
   const fetchMoreFeedVideos = useCallback(async () => {
     if (loadingMoreRef.current || !hasMoreRef.current) return;
@@ -160,8 +171,16 @@ export default function HomeScreen({ navigation }) {
       const limit = 5;
       const currentOffset = offsetRef.current;
       const data = await getVideos(limit, currentOffset);
+      const currentUserId = String(user?.email || '').trim().toLowerCase();
+      const normalizedData = data.map((video) => {
+        const likedBy = Array.isArray(video.likedBy) ? video.likedBy.map((value) => String(value).toLowerCase()) : [];
+        return {
+          ...video,
+          hasLiked: currentUserId ? likedBy.includes(currentUserId) : false,
+        };
+      });
 
-      setVideos((prev) => [...prev, ...data]);
+      setVideos((prev) => [...prev, ...normalizedData]);
 
       const nextOffset = currentOffset + data.length;
       offsetRef.current = nextOffset;
@@ -176,7 +195,65 @@ export default function HomeScreen({ navigation }) {
       loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, []);
+  }, [user?.email]);
+
+  const handleLike = useCallback(async (video) => {
+    if (!isLoggedIn || !user?.email) {
+      Alert.alert('Inicia sesion', 'Debes iniciar sesion para gestionar likes.');
+      return;
+    }
+
+    if (!video?.id || likingVideoId === video.id) return;
+
+    const wasLiked = Boolean(video.hasLiked);
+
+    setLikingVideoId(video.id);
+
+    // Actualizacion optimista para una respuesta instantanea en UI.
+    setVideos((prev) => prev.map((item) => (
+      item.id === video.id
+        ? {
+            ...item,
+            likes: wasLiked
+              ? Math.max(0, Number(item.likes || 0) - 1)
+              : Number(item.likes || 0) + 1,
+            hasLiked: !wasLiked,
+          }
+        : item
+    )));
+
+    try {
+      const response = wasLiked
+        ? await unlikeVideo(video.id, user.email)
+        : await likeVideo(video.id, user.email);
+
+      setVideos((prev) => prev.map((item) => (
+        item.id === video.id
+          ? {
+              ...item,
+              likes: Number(response.likes ?? item.likes ?? 0),
+              hasLiked: Boolean(response.liked),
+            }
+          : item
+      )));
+    } catch (error) {
+      // Revertir optimista en caso de fallo real.
+      setVideos((prev) => prev.map((item) => (
+        item.id === video.id
+          ? {
+              ...item,
+              likes: wasLiked
+                ? Number(item.likes || 0) + 1
+                : Math.max(0, Number(item.likes || 0) - 1),
+              hasLiked: wasLiked,
+            }
+          : item
+      )));
+      Alert.alert('Error', error.message || 'No se pudo actualizar el like.');
+    } finally {
+      setLikingVideoId(null);
+    }
+  }, [isLoggedIn, user?.email, likingVideoId]);
 
   useEffect(() => {
     refreshFeed();
@@ -224,7 +301,9 @@ export default function HomeScreen({ navigation }) {
             <FeedVideoItem 
                video={item} 
                isActive={index === activeIndex && isFocused} 
-               height={containerHeight} 
+               height={containerHeight}
+               onLikePress={handleLike}
+               liking={likingVideoId === item.id}
             />
           )}
           keyExtractor={(item) => item.id.toString()}

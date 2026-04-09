@@ -52,6 +52,7 @@ app.post('/api/videos', upload.single('file'), async (req, res) => {
             description,
             id_usuario,
             likes: 0,
+            likedBy: [],
             createdAt: new Date()
         };
 
@@ -65,6 +66,7 @@ app.post('/api/videos', upload.single('file'), async (req, res) => {
             description,
             id_usuario,
             likes: 0,
+            likedBy: [],
             createdAt: videoDoc.createdAt.toISOString()
         });
 
@@ -95,6 +97,96 @@ app.get('/api/videos', async (req, res) => {
     } catch (error) {
         console.error('Error al obtener videos:', error);
         res.status(500).json({ error: 'Error interno del servidor', details: error.message });
+    }
+});
+
+app.post('/api/videos/:id/like', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userIdRaw = String(req.body?.id_usuario || '').trim().toLowerCase();
+
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'id de video invalido' });
+        }
+
+        if (!userIdRaw) {
+            return res.status(400).json({ message: 'id_usuario es obligatorio' });
+        }
+
+        const videoObjectId = new ObjectId(id);
+
+        const result = await db.collection('videos').updateOne(
+            { _id: videoObjectId, likedBy: { $ne: userIdRaw } },
+            {
+                $inc: { likes: 1 },
+                $addToSet: { likedBy: userIdRaw },
+            }
+        );
+
+        const video = await db.collection('videos').findOne({ _id: videoObjectId });
+        if (!video) {
+            return res.status(404).json({ message: 'Video no encontrado' });
+        }
+
+        const alreadyLiked = result.modifiedCount === 0;
+
+        return res.json({
+            id: video._id.toString(),
+            likes: Number(video.likes || 0),
+            liked: true,
+            alreadyLiked,
+        });
+    } catch (error) {
+        console.error('Error al dar like:', error);
+        return res.status(500).json({ message: 'Error interno del servidor', details: error.message });
+    }
+});
+
+app.post('/api/videos/:id/unlike', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userIdRaw = String(req.body?.id_usuario || '').trim().toLowerCase();
+
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'id de video invalido' });
+        }
+
+        if (!userIdRaw) {
+            return res.status(400).json({ message: 'id_usuario es obligatorio' });
+        }
+
+        const videoObjectId = new ObjectId(id);
+
+        const result = await db.collection('videos').updateOne(
+            { _id: videoObjectId, likedBy: userIdRaw },
+            {
+                $inc: { likes: -1 },
+                $pull: { likedBy: userIdRaw },
+            }
+        );
+
+        // Protección adicional ante datos legacy inconsistentes.
+        await db.collection('videos').updateOne(
+            { _id: videoObjectId, likes: { $lt: 0 } },
+            { $set: { likes: 0 } }
+        );
+
+        const video = await db.collection('videos').findOne({ _id: videoObjectId });
+        if (!video) {
+            return res.status(404).json({ message: 'Video no encontrado' });
+        }
+
+        const alreadyUnliked = result.modifiedCount === 0;
+
+        return res.json({
+            id: video._id.toString(),
+            likes: Number(video.likes || 0),
+            liked: false,
+            alreadyUnliked,
+        });
+    } catch (error) {
+        console.error('Error al quitar like:', error);
+        return res.status(500).json({ message: 'Error interno del servidor', details: error.message });
     }
 });
 

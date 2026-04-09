@@ -86,3 +86,27 @@ export async function getVideos(limit = 10, offset = 0) {
   const response = await fetch(buildApiUrl(`/api/videos?limit=${limit}&offset=${offset}`));
   return parseResponse(response);
 }
+
+export async function likeVideo(videoId, idUsuario) {
+  const response = await fetch(buildApiUrl(`/api/videos/${videoId}/like`), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ id_usuario: idUsuario }),
+  });
+
+  return parseResponse(response);
+}
+
+export async function unlikeVideo(videoId, idUsuario) {
+  const response = await fetch(buildApiUrl(`/api/videos/${videoId}/unlike`), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ id_usuario: idUsuario }),
+  });
+
+  return parseResponse(response);
+}
