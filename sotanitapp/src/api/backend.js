@@ -87,6 +87,21 @@ export async function getVideos(limit = 10, offset = 0) {
   return parseResponse(response);
 }
 
+export async function getAllVideos(limit = 20, maxPages = 50) {
+  const all = [];
+  let offset = 0;
+
+  for (let page = 0; page < maxPages; page += 1) {
+    const batch = await getVideos(limit, offset);
+    all.push(...batch);
+
+    if (batch.length < limit) break;
+    offset += batch.length;
+  }
+
+  return all;
+}
+
 export async function likeVideo(videoId, idUsuario) {
   const response = await fetch(buildApiUrl(`/api/videos/${videoId}/like`), {
     method: 'POST',

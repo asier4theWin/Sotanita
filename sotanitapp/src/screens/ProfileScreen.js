@@ -1,17 +1,18 @@
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useAppTheme } from '../hooks/useAppTheme';
 import useResetScrollOnFocus from '../hooks/useResetScrollOnFocus';
-import { getTeamNames } from '../api/backend';
+import { getAllVideos, getTeamNames } from '../api/backend';
 import ScreenGradient from '../components/ScreenGradient';
 import FifaCard from '../components/FifaCard';
 import AppButton from '../components/AppButton';
 import AppInput from '../components/AppInput';
 import VideoTile from '../components/VideoTile';
-import { likedVideos, positions, userVideos } from '../utils/mockData';
+import { positions } from '../utils/mockData';
 
 export default function ProfileScreen({ navigation, hideProfileCard = false }) {
   const { user, isLoggedIn, guestMode, logout, updateUser } = useAuth();
@@ -23,8 +24,11 @@ export default function ProfileScreen({ navigation, hideProfileCard = false }) {
   const [focusedPicker, setFocusedPicker] = useState(false);
   const [teamOptions, setTeamOptions] = useState([]);
   const [loadingTeams, setLoadingTeams] = useState(false);
+  const [loadingVideos, setLoadingVideos] = useState(false);
   const [savingChanges, setSavingChanges] = useState(false);
   const [editError, setEditError] = useState('');
+  const [uploadedVideos, setUploadedVideos] = useState([]);
+  const [likedVideos, setLikedVideos] = useState([]);
   const scrollRef = useRef(null);
 
   useResetScrollOnFocus(scrollRef);
@@ -90,6 +94,49 @@ export default function ProfileScreen({ navigation, hideProfileCard = false }) {
   };
 
   const requireLogin = !isLoggedIn && guestMode;
+
+  const loadProfileVideos = useCallback(async () => {
+    if (!isLoggedIn || !user?.email) {
+      setUploadedVideos([]);
+      setLikedVideos([]);
+      return;
+    }
+
+    setLoadingVideos(true);
+    try {
+      const currentUserId = String(user.email).trim().toLowerCase();
+      const allVideos = await getAllVideos(20, 50);
+
+      const normalized = allVideos.map((video) => {
+        const uploader = String(video.id_usuario || '').trim().toLowerCase();
+        const likedBy = Array.isArray(video.likedBy)
+          ? video.likedBy.map((value) => String(value).trim().toLowerCase())
+          : [];
+
+        return {
+          ...video,
+          user: uploader ? uploader.split('@')[0] : 'usuario',
+          uploader,
+          hasLiked: likedBy.includes(currentUserId),
+        };
+      });
+
+      setUploadedVideos(normalized.filter((video) => video.uploader === currentUserId));
+      setLikedVideos(normalized.filter((video) => video.hasLiked));
+    } catch (error) {
+      console.error('Error cargando videos del perfil:', error);
+    } finally {
+      setLoadingVideos(false);
+    }
+  }, [isLoggedIn, user?.email]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadProfileVideos();
+    }, [loadProfileVideos])
+  );
+
+  const videosToShow = activeTab === 'uploaded' ? uploadedVideos : likedVideos;
 
   return (
     <ScreenGradient>
@@ -166,18 +213,26 @@ export default function ProfileScreen({ navigation, hideProfileCard = false }) {
             </View>
 
             <View style={[styles.gridWrap, { paddingHorizontal: spacing.md }]}> 
-              {(activeTab === 'uploaded' ? userVideos : likedVideos).map((video, index) => (
+              {videosToShow.map((video) => (
                 <VideoTile
                   key={video.id}
                   item={video}
                   variant={activeTab === 'uploaded' ? 'uploaded' : 'liked'}
                   onPress={() => {
-                    if (activeTab === 'uploaded') {
-                      navigation.navigate('MyVideos', { videoIndex: index });
-                    }
+                    navigation.navigate('MyVideos', {
+                      videoId: video.id,
+                      sourceTab: activeTab,
+                    });
                   }}
                 />
               ))}
+              {!loadingVideos && videosToShow.length === 0 ? (
+                <View style={[styles.emptyVideosWrap, { borderColor: colors.border, backgroundColor: colors.surface }]}> 
+                  <Text style={{ color: colors.textMuted, fontWeight: typography.weights.semibold }}>
+                    {activeTab === 'uploaded' ? 'Aun no has subido videos' : 'Aun no has dado like a ningun video'}
+                  </Text>
+                </View>
+              ) : null}
             </View>
           </>
         )}
@@ -313,7 +368,8 @@ const styles = StyleSheet.create({
     marginTop: 14,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
+    gap: 8,
   },
   modalOverlay: {
     flex: 1,
@@ -345,5 +401,13 @@ const styles = StyleSheet.create({
   error: {
     fontSize: 12,
     marginBottom: 12,
+  },
+  emptyVideosWrap: {
+    width: '100%',
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    alignItems: 'center',
   },
 });

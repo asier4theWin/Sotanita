@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -13,25 +13,80 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Video, ResizeMode } from 'expo-av';
 import { useAuth } from '../context/AuthContext';
 import { useAppTheme } from '../hooks/useAppTheme';
 import FifaCard from '../components/FifaCard';
 import AppButton from '../components/AppButton';
-import { feedVideos } from '../utils/mockData';
+import { getAllVideos } from '../api/backend';
 import { formatLikes } from '../utils/format';
 
 export default function MyVideosScreen({ navigation, route }) {
   const { user } = useAuth();
   const { colors, gradients, spacing, typography, textScale } = useAppTheme();
-  const [currentVideo, setCurrentVideo] = useState(route.params?.videoIndex || 0);
+  const [videos, setVideos] = useState([]);
+  const [loadingVideos, setLoadingVideos] = useState(true);
+  const [currentVideo, setCurrentVideo] = useState(0);
   const [liked, setLiked] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [commentText, setCommentText] = useState('');
   const commentsAnim = useRef(new Animated.Value(0)).current;
+  const selectedVideoId = route.params?.videoId;
+  const sourceTab = route.params?.sourceTab || 'uploaded';
 
-  const activeVideo = feedVideos[currentVideo] || feedVideos[0];
+  useEffect(() => {
+    const loadVideos = async () => {
+      if (!user?.email) {
+        setVideos([]);
+        setLoadingVideos(false);
+        return;
+      }
+
+      setLoadingVideos(true);
+      try {
+        const currentUserId = String(user.email).trim().toLowerCase();
+        const allVideos = await getAllVideos(20, 50);
+        const normalized = allVideos.map((video) => {
+          const uploader = String(video.id_usuario || '').trim().toLowerCase();
+          const likedBy = Array.isArray(video.likedBy)
+            ? video.likedBy.map((value) => String(value).trim().toLowerCase())
+            : [];
+
+          return {
+            ...video,
+            user: uploader ? uploader.split('@')[0] : 'usuario',
+            uploader,
+            hasLiked: likedBy.includes(currentUserId),
+          };
+        });
+
+        const filtered = sourceTab === 'liked'
+          ? normalized.filter((video) => video.hasLiked)
+          : normalized.filter((video) => video.uploader === currentUserId);
+
+        setVideos(filtered);
+
+        if (selectedVideoId) {
+          const selectedIndex = filtered.findIndex((video) => String(video.id) === String(selectedVideoId));
+          setCurrentVideo(selectedIndex >= 0 ? selectedIndex : 0);
+        } else {
+          setCurrentVideo(0);
+        }
+      } catch (error) {
+        console.error('Error cargando videos en MyVideos:', error);
+        setVideos([]);
+      } finally {
+        setLoadingVideos(false);
+      }
+    };
+
+    loadVideos();
+  }, [sourceTab, selectedVideoId, user?.email]);
+
+  const activeVideo = videos[currentVideo] || null;
+  const canCycleVideos = videos.length > 1;
 
   const openComments = () => {
     setShowComments(true);
@@ -61,6 +116,11 @@ export default function MyVideosScreen({ navigation, route }) {
     outputRange: [420, 0],
   });
 
+  const headerTitle = useMemo(
+    () => (sourceTab === 'liked' ? 'Video que te gusta' : 'Tu video'),
+    [sourceTab]
+  );
+
   return (
     <View style={styles.root}>
       <LinearGradient colors={gradients.video} style={StyleSheet.absoluteFillObject} />
@@ -76,26 +136,57 @@ export default function MyVideosScreen({ navigation, route }) {
           </Pressable>
         </View>
 
-        <Pressable style={styles.videoCenter} onPress={() => setCurrentVideo((prev) => (prev + 1) % feedVideos.length)}>
-          <Ionicons name="play-circle" size={90} color={`${colors.white}55`} />
-          <Text style={{ color: `${colors.white}80`, marginTop: spacing.xs }}>Tu video</Text>
-        </Pressable>
+        {loadingVideos ? (
+          <View style={styles.videoCenter}>
+            <Text style={{ color: `${colors.white}80` }}>Cargando videos...</Text>
+          </View>
+        ) : !activeVideo ? (
+          <View style={styles.videoCenter}>
+            <Text style={{ color: `${colors.white}80` }}>
+              {sourceTab === 'liked' ? 'No tienes videos con like' : 'No tienes videos subidos'}
+            </Text>
+          </View>
+        ) : (
+          <Pressable
+            style={styles.videoCenter}
+            onPress={() => {
+              if (!canCycleVideos) return;
+              setCurrentVideo((prev) => (prev + 1) % videos.length);
+              setLiked(false);
+            }}
+          >
+            <Video
+              style={StyleSheet.absoluteFillObject}
+              source={{ uri: activeVideo.url }}
+              resizeMode={ResizeMode.COVER}
+              isLooping
+              shouldPlay
+              isMuted={false}
+              volume={1.0}
+            />
+            <LinearGradient colors={['transparent', 'rgba(0,0,0,0.7)']} style={StyleSheet.absoluteFillObject} />
+            <Ionicons name="play-circle" size={90} color={`${colors.white}55`} />
+            <Text style={{ color: `${colors.white}80`, marginTop: spacing.xs }}>{headerTitle}</Text>
+          </Pressable>
+        )}
 
         <View style={[styles.sideActions, { right: spacing.md }]}> 
           <FifaCard
             size="small"
-            username={user?.username || activeVideo.user}
-            team={user?.team || activeVideo.team}
-            position={user?.position || activeVideo.position}
+            username={user?.username || activeVideo?.user || 'usuario'}
+            team={user?.team || 'Sin equipo'}
+            position={user?.position || '---'}
             backgroundUrl={user?.teamImageUrl}
             frameUrl={user?.frameImageId}
           />
 
-          <Pressable onPress={() => setLiked((prev) => !prev)} style={styles.actionWrap}>
+          <Pressable onPress={() => setLiked((prev) => !prev)} style={styles.actionWrap} disabled={!activeVideo}>
             <View style={[styles.actionCircle, { backgroundColor: `${colors.black}88` }]}> 
               <Ionicons name={liked ? 'heart' : 'heart-outline'} size={28} color={liked ? colors.danger : colors.white} />
             </View>
-            <Text style={{ color: colors.white, fontSize: typography.sizes.xs * textScale }}>{formatLikes(activeVideo.likes + (liked ? 1 : 0))}</Text>
+            <Text style={{ color: colors.white, fontSize: typography.sizes.xs * textScale }}>
+              {formatLikes((activeVideo?.likes || 0) + (liked ? 1 : 0))}
+            </Text>
           </Pressable>
 
           <Pressable onPress={openComments} style={styles.actionWrap}>

@@ -30,7 +30,7 @@ export default function VideoTile({ item, onPress, variant = 'uploaded' }) {
 
 const styles = StyleSheet.create({
   tile: {
-    width: '32%',
+    width: '31.5%',
     aspectRatio: 9 / 16,
     borderRadius: 10,
     overflow: 'hidden',
