@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Avatar from './Avatar';
 import { useAppTheme } from '../hooks/useAppTheme';
 
-export default function NotificationItem({ item }) {
+export default function NotificationItem({ item, onOpenVideo }) {
   const { colors, spacing, typography, textScale } = useAppTheme();
 
   return (
@@ -10,7 +10,24 @@ export default function NotificationItem({ item }) {
       <Avatar name={item.user} />
       <View style={styles.content}>
         <Text style={{ color: colors.text, fontSize: typography.sizes.sm * textScale }}>
-          <Text style={{ fontWeight: typography.weights.bold }}>{item.user}</Text> <Text style={{ color: colors.textMuted }}>{item.action}</Text>
+          <Text style={{ fontWeight: typography.weights.bold }}>{item.user}</Text>{' '}
+          <Text style={{ color: colors.textMuted }}>{item.action}</Text>
+          {item.videoTitle ? (
+            <Text
+              onPress={() => {
+                if (item.videoId && onOpenVideo) {
+                  onOpenVideo(item.videoId);
+                }
+              }}
+              style={{
+                color: colors.primary,
+                textDecorationLine: 'underline',
+                fontWeight: typography.weights.semibold,
+              }}
+            >
+              {' '}{item.videoTitle}
+            </Text>
+          ) : null}
         </Text>
         <Text style={{ color: colors.textMuted, fontSize: typography.sizes.xs * textScale, marginTop: 4 }}>{item.time}</Text>
       </View>

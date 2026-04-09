@@ -130,6 +130,27 @@ app.post('/api/videos/:id/like', async (req, res) => {
 
         const alreadyLiked = result.modifiedCount === 0;
 
+        // Crear notificacion en cada like nuevo.
+        const ownerUserId = String(video.id_usuario || '').trim().toLowerCase();
+        if (!alreadyLiked) {
+            const recipientUserId = ownerUserId || userIdRaw;
+            const actorProfile = await db.collection('perfiles').findOne({ email: userIdRaw });
+            const actorUsername = String(actorProfile?.username || userIdRaw.split('@')[0] || 'Usuario').trim();
+            const videoTitle = String(video.title || 'video').trim();
+
+            await db.collection('notificaciones').insertOne({
+                videoId: video._id.toString(),
+                videoTitle,
+                actorUserId: userIdRaw,
+                actorUsername,
+                recipientUserId,
+                message: `${actorUsername} le ha dado me gusta a tu video: ${videoTitle}`,
+                type: 'like',
+                read: false,
+                createdAt: new Date(),
+            });
+        }
+
         return res.json({
             id: video._id.toString(),
             likes: Number(video.likes || 0),
@@ -138,6 +159,36 @@ app.post('/api/videos/:id/like', async (req, res) => {
         });
     } catch (error) {
         console.error('Error al dar like:', error);
+        return res.status(500).json({ message: 'Error interno del servidor', details: error.message });
+    }
+});
+
+app.get('/api/notificaciones', async (req, res) => {
+    try {
+        const userIdRaw = String(req.query?.id_usuario || '').trim().toLowerCase();
+        const limit = parseInt(req.query.limit, 10) || 20;
+        const offset = parseInt(req.query.offset, 10) || 0;
+
+        if (!userIdRaw) {
+            return res.status(400).json({ message: 'id_usuario es obligatorio' });
+        }
+
+        const notifications = await db.collection('notificaciones')
+            .find({ recipientUserId: userIdRaw })
+            .sort({ createdAt: -1 })
+            .skip(offset)
+            .limit(limit)
+            .toArray();
+
+        return res.json(
+            notifications.map((n) => ({
+                ...n,
+                id: n._id.toString(),
+                _id: undefined,
+            }))
+        );
+    } catch (error) {
+        console.error('Error al obtener notificaciones:', error);
         return res.status(500).json({ message: 'Error interno del servidor', details: error.message });
     }
 });

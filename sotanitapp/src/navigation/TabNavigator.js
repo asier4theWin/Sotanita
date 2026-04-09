@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { Animated, Easing, FlatList, Image, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -9,7 +9,7 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { useAuth } from '../context/AuthContext';
 import { useAppTheme } from '../hooks/useAppTheme';
-import { notifications } from '../utils/mockData';
+import { getAllNotifications } from '../api/backend';
 import NotificationItem from '../components/NotificationItem';
 import FifaCard from '../components/FifaCard';
 
@@ -27,6 +27,23 @@ const TAB_CARD_SIZE = { width: 84, height: 120 };
 const PROFILE_CARD_SIZE = { width: 174, height: 246 };
 const PROFILE_CARD_TARGET_TOP = 74;
 
+function formatRelativeTime(value) {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return 'ahora';
+
+  const diffMs = Date.now() - date.getTime();
+  const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
+
+  if (diffMinutes < 1) return 'ahora';
+  if (diffMinutes < 60) return `${diffMinutes}m`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d`;
+}
+
 function buildTabCardSource(value, fallback) {
   const raw = String(value ?? '').trim();
   if (!raw) return fallback;
@@ -35,11 +52,13 @@ function buildTabCardSource(value, fallback) {
   return fallback;
 }
 
-export default function TabNavigator() {
+export default function TabNavigator({ navigation }) {
   const { user, isLoggedIn } = useAuth();
   const { colors, spacing, typography, textScale, darkMode, highContrast } = useAppTheme();
   const { width, height } = useWindowDimensions();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [modalNotifications, setModalNotifications] = useState([]);
+  const [loadingModalNotifications, setLoadingModalNotifications] = useState(false);
   const [showProfileTransition, setShowProfileTransition] = useState(false);
   const [isProfileAnimating, setIsProfileAnimating] = useState(false);
   const profileTransition = useRef(new Animated.Value(0)).current;
@@ -166,6 +185,44 @@ export default function TabNavigator() {
     inputRange: [0, 0.64, 1],
     outputRange: ['0deg', '540deg', '720deg'],
   });
+
+  useEffect(() => {
+    const loadModalNotifications = async () => {
+      if (!showNotifications) return;
+
+      if (!isLoggedIn || !user?.email) {
+        setModalNotifications([]);
+        return;
+      }
+
+      setLoadingModalNotifications(true);
+      try {
+        const currentUserEmail = String(user.email).trim().toLowerCase();
+        const data = await getAllNotifications(currentUserEmail, 50, 50);
+        const filtered = data.filter(
+          (item) => String(item.recipientUserId || '').trim().toLowerCase() === currentUserEmail
+        );
+
+        const mapped = filtered.map((item) => ({
+          id: item.id,
+          user: String(item.actorUsername || item.actorUserId || 'Usuario').split('@')[0],
+          action: 'le ha dado me gusta a tu video',
+          videoId: item.videoId,
+          videoTitle: item.videoTitle || '',
+          time: formatRelativeTime(item.createdAt),
+        }));
+
+        setModalNotifications(mapped);
+      } catch (error) {
+        console.error('Error cargando notificaciones del modal:', error);
+        setModalNotifications([]);
+      } finally {
+        setLoadingModalNotifications(false);
+      }
+    };
+
+    loadModalNotifications();
+  }, [showNotifications, isLoggedIn, user?.email]);
 
   return (
     <>
@@ -340,10 +397,29 @@ export default function TabNavigator() {
             </View>
 
             <FlatList
-              data={notifications}
+              data={modalNotifications}
               keyExtractor={(item) => String(item.id)}
               contentContainerStyle={{ padding: spacing.sm, paddingBottom: spacing.md }}
-              renderItem={({ item }) => <NotificationItem item={item} />}
+              renderItem={({ item }) => (
+                <NotificationItem
+                  item={item}
+                  onOpenVideo={(videoId) => {
+                    if (!videoId) return;
+                    setShowNotifications(false);
+                    navigation.navigate('MyVideos', {
+                      videoId,
+                      sourceTab: 'uploaded',
+                    });
+                  }}
+                />
+              )}
+              ListEmptyComponent={
+                <View style={{ paddingTop: spacing.sm, alignItems: 'center' }}>
+                  <Text style={{ color: colors.textMuted }}>
+                    {loadingModalNotifications ? 'Cargando notificaciones...' : 'No tienes notificaciones'}
+                  </Text>
+                </View>
+              }
             />
           </Pressable>
         </Pressable>

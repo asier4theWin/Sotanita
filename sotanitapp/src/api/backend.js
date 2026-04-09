@@ -137,3 +137,27 @@ export async function deleteVideo(videoId, idUsuario) {
 
   return parseResponse(response);
 }
+
+export async function getNotifications(idUsuario, limit = 20, offset = 0) {
+  const encodedUser = encodeURIComponent(idUsuario);
+  const response = await fetch(
+    buildApiUrl(`/api/notificaciones?id_usuario=${encodedUser}&limit=${limit}&offset=${offset}`)
+  );
+
+  return parseResponse(response);
+}
+
+export async function getAllNotifications(idUsuario, pageSize = 50, maxPages = 50) {
+  const all = [];
+  let offset = 0;
+
+  for (let page = 0; page < maxPages; page += 1) {
+    const batch = await getNotifications(idUsuario, pageSize, offset);
+    all.push(...batch);
+
+    if (batch.length < pageSize) break;
+    offset += batch.length;
+  }
+
+  return all;
+}
