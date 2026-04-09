@@ -1,20 +1,66 @@
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createUser, getTeamIdByName, updateUser as updateUserAPI, loginUser as loginUserAPI } from '../api/backend';
 
 const AuthContext = createContext(undefined);
+const AUTH_STORAGE_KEY = 'sotanita_auth_session_v1';
+
+async function persistSession(session) {
+  try {
+    await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+  } catch (error) {
+    console.error('Error guardando sesion:', error);
+  }
+}
+
+async function clearPersistedSession() {
+  try {
+    await AsyncStorage.removeItem(AUTH_STORAGE_KEY);
+  } catch (error) {
+    console.error('Error limpiando sesion:', error);
+  }
+}
 
 export function AuthProvider({ children }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [guestMode, setGuestMode] = useState(false);
   const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  useEffect(() => {
+    const restoreSession = async () => {
+      try {
+        const raw = await AsyncStorage.getItem(AUTH_STORAGE_KEY);
+        if (!raw) {
+          setAuthLoading(false);
+          return;
+        }
+
+        const session = JSON.parse(raw);
+        if (session?.isLoggedIn && session?.user?.id) {
+          setIsLoggedIn(true);
+          setGuestMode(false);
+          setUser(session.user);
+        } else if (session?.guestMode) {
+          setGuestMode(true);
+          setIsLoggedIn(false);
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Error restaurando sesion:', error);
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    restoreSession();
+  }, []);
 
   const login = async (email, password) => {
     try {
       const userData = await loginUserAPI(email, password);
 
-      setIsLoggedIn(true);
-      setGuestMode(false);
-      setUser({
+      const normalizedUser = {
         id: userData.id,
         username: userData.username,
         email: userData.email,
@@ -24,6 +70,16 @@ export function AuthProvider({ children }) {
         frameId: userData.frameId,
         teamImageUrl: userData.teamImageUrl,
         frameImageId: userData.frameImageUrl || userData.frameImageId,
+      };
+
+      setIsLoggedIn(true);
+      setGuestMode(false);
+      setUser(normalizedUser);
+
+      await persistSession({
+        isLoggedIn: true,
+        guestMode: false,
+        user: normalizedUser,
       });
 
       return userData;
@@ -31,6 +87,7 @@ export function AuthProvider({ children }) {
       setIsLoggedIn(false);
       setGuestMode(false);
       setUser(null);
+      await clearPersistedSession();
       throw error;
     }
   };
@@ -48,9 +105,7 @@ export function AuthProvider({ children }) {
       frameId: data.frameId || 'bronce',
     });
 
-    setIsLoggedIn(true);
-    setGuestMode(false);
-    setUser({
+    const normalizedUser = {
       id: createdUser.id,
       username: createdUser.username,
       email: createdUser.email,
@@ -60,6 +115,16 @@ export function AuthProvider({ children }) {
       frameId: createdUser.frameId,
       teamImageUrl: createdUser.teamImageUrl,
       frameImageId: createdUser.frameImageUrl || createdUser.frameImageId,
+    };
+
+    setIsLoggedIn(true);
+    setGuestMode(false);
+    setUser(normalizedUser);
+
+    await persistSession({
+      isLoggedIn: true,
+      guestMode: false,
+      user: normalizedUser,
     });
 
     return createdUser;
@@ -69,12 +134,18 @@ export function AuthProvider({ children }) {
     setIsLoggedIn(false);
     setGuestMode(false);
     setUser(null);
+    clearPersistedSession();
   };
 
   const enterAsGuest = () => {
     setGuestMode(true);
     setIsLoggedIn(false);
     setUser(null);
+    persistSession({
+      isLoggedIn: false,
+      guestMode: true,
+      user: null,
+    });
   };
 
   const updateUser = async (data) => {
@@ -104,7 +175,7 @@ export function AuthProvider({ children }) {
         setUser((prev) => {
           if (!prev) return prev;
 
-          return {
+          const mergedUser = {
             ...prev,
             id: updatedUser.id ?? prev.id,
             username: updatedUser.username ?? prev.username,
@@ -116,11 +187,30 @@ export function AuthProvider({ children }) {
             teamImageUrl: updatedUser.teamImageUrl ?? prev.teamImageUrl,
             frameImageId: updatedUser.frameImageUrl ?? updatedUser.frameImageId ?? prev.frameImageId,
           };
+
+          persistSession({
+            isLoggedIn: true,
+            guestMode: false,
+            user: mergedUser,
+          });
+
+          return mergedUser;
         });
         return;
       }
 
-      setUser((prev) => (prev ? { ...prev, ...data } : prev));
+      setUser((prev) => {
+        if (!prev) return prev;
+        const mergedUser = { ...prev, ...data };
+
+        persistSession({
+          isLoggedIn: true,
+          guestMode: false,
+          user: mergedUser,
+        });
+
+        return mergedUser;
+      });
     } catch (error) {
       console.error('Error actualizando usuario:', error);
       throw error;
@@ -132,13 +222,14 @@ export function AuthProvider({ children }) {
       isLoggedIn,
       guestMode,
       user,
+      authLoading,
       login,
       register,
       logout,
       enterAsGuest,
       updateUser,
     }),
-    [isLoggedIn, guestMode, user]
+    [isLoggedIn, guestMode, user, authLoading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
