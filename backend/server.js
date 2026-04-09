@@ -190,6 +190,44 @@ app.post('/api/videos/:id/unlike', async (req, res) => {
     }
 });
 
+app.delete('/api/videos/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userIdRaw = String(req.body?.id_usuario || req.query?.id_usuario || '').trim().toLowerCase();
+
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'id de video invalido' });
+        }
+
+        if (!userIdRaw) {
+            return res.status(400).json({ message: 'id_usuario es obligatorio' });
+        }
+
+        const videoObjectId = new ObjectId(id);
+        const video = await db.collection('videos').findOne({ _id: videoObjectId });
+
+        if (!video) {
+            return res.status(404).json({ message: 'Video no encontrado' });
+        }
+
+        const ownerId = String(video.id_usuario || '').trim().toLowerCase();
+        if (ownerId !== userIdRaw) {
+            return res.status(403).json({ message: 'No tienes permiso para eliminar este video' });
+        }
+
+        await db.collection('videos').deleteOne({ _id: videoObjectId });
+
+        return res.json({
+            success: true,
+            id: id,
+            message: 'Video eliminado correctamente',
+        });
+    } catch (error) {
+        console.error('Error al eliminar video:', error);
+        return res.status(500).json({ message: 'Error interno del servidor', details: error.message });
+    }
+});
+
 const mongoUri = process.env.MONGO_URI;
 
 if (!mongoUri) {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Easing,
   FlatList,
@@ -18,7 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import { useAppTheme } from '../hooks/useAppTheme';
 import FifaCard from '../components/FifaCard';
 import AppButton from '../components/AppButton';
-import { getAllVideos } from '../api/backend';
+import { deleteVideo, getAllVideos } from '../api/backend';
 import { formatLikes } from '../utils/format';
 
 export default function MyVideosScreen({ navigation, route }) {
@@ -31,6 +32,7 @@ export default function MyVideosScreen({ navigation, route }) {
   const [showComments, setShowComments] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingVideo, setDeletingVideo] = useState(false);
   const [commentText, setCommentText] = useState('');
   const commentsAnim = useRef(new Animated.Value(0)).current;
   const selectedVideoId = route.params?.videoId;
@@ -87,6 +89,7 @@ export default function MyVideosScreen({ navigation, route }) {
 
   const activeVideo = videos[currentVideo] || null;
   const canCycleVideos = videos.length > 1;
+  const canDeleteVideo = sourceTab === 'uploaded' && Boolean(activeVideo);
 
   const openComments = () => {
     setShowComments(true);
@@ -121,6 +124,35 @@ export default function MyVideosScreen({ navigation, route }) {
     [sourceTab]
   );
 
+  const handleDeleteVideo = async () => {
+    if (!activeVideo?.id || !user?.email || deletingVideo) return;
+
+    setDeletingVideo(true);
+    try {
+      await deleteVideo(activeVideo.id, user.email);
+
+      setVideos((prev) => {
+        const filtered = prev.filter((video) => String(video.id) !== String(activeVideo.id));
+
+        if (filtered.length === 0) {
+          setCurrentVideo(0);
+          navigation.goBack();
+          return filtered;
+        }
+
+        setCurrentVideo((prevIndex) => Math.min(prevIndex, filtered.length - 1));
+        return filtered;
+      });
+
+      setShowDeleteConfirm(false);
+      Alert.alert('Listo', 'Publicacion eliminada correctamente.');
+    } catch (error) {
+      Alert.alert('Error', error.message || 'No se pudo eliminar la publicacion.');
+    } finally {
+      setDeletingVideo(false);
+    }
+  };
+
   return (
     <View style={styles.root}>
       <LinearGradient colors={gradients.video} style={StyleSheet.absoluteFillObject} />
@@ -131,9 +163,13 @@ export default function MyVideosScreen({ navigation, route }) {
             <Ionicons name="arrow-back" size={20} color={colors.white} />
           </Pressable>
 
-          <Pressable onPress={() => setShowDeleteConfirm(true)} style={[styles.roundButton, { backgroundColor: `${colors.danger}CC` }]}> 
-            <Ionicons name="trash" size={20} color={colors.white} />
-          </Pressable>
+          {canDeleteVideo ? (
+            <Pressable onPress={() => setShowDeleteConfirm(true)} style={[styles.roundButton, { backgroundColor: `${colors.danger}CC` }]}> 
+              <Ionicons name="trash" size={20} color={colors.white} />
+            </Pressable>
+          ) : (
+            <View style={styles.roundButtonSpacer} />
+          )}
         </View>
 
         {loadingVideos ? (
@@ -281,7 +317,7 @@ export default function MyVideosScreen({ navigation, route }) {
         </Pressable>
       </Modal>
 
-      <Modal visible={showDeleteConfirm} transparent animationType="fade" onRequestClose={() => setShowDeleteConfirm(false)}>
+      <Modal visible={canDeleteVideo && showDeleteConfirm} transparent animationType="fade" onRequestClose={() => setShowDeleteConfirm(false)}>
         <Pressable style={[styles.overlay, { backgroundColor: colors.overlay }]} onPress={() => setShowDeleteConfirm(false)}>
           <Pressable style={[styles.dialog, { backgroundColor: colors.surface }]} onPress={() => {}}>
             <Text style={{ color: colors.text, fontWeight: typography.weights.bold, fontSize: typography.sizes.lg * textScale, marginBottom: 8 }}>
@@ -290,7 +326,7 @@ export default function MyVideosScreen({ navigation, route }) {
             <Text style={{ color: colors.textMuted, marginBottom: 16 }}>Esta accion no se puede deshacer.</Text>
             <View style={styles.dialogActions}>
               <AppButton title="Cancelar" variant="secondary" onPress={() => setShowDeleteConfirm(false)} style={{ flex: 1 }} />
-              <AppButton title="Eliminar" variant="danger" onPress={() => setShowDeleteConfirm(false)} style={{ flex: 1 }} />
+              <AppButton title="Eliminar" variant="danger" loading={deletingVideo} onPress={handleDeleteVideo} style={{ flex: 1 }} />
             </View>
           </Pressable>
         </Pressable>
@@ -319,6 +355,10 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  roundButtonSpacer: {
+    width: 42,
+    height: 42,
   },
   videoCenter: {
     flex: 1,

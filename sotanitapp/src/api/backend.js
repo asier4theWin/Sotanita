@@ -125,3 +125,15 @@ export async function unlikeVideo(videoId, idUsuario) {
 
   return parseResponse(response);
 }
+
+export async function deleteVideo(videoId, idUsuario) {
+  const response = await fetch(buildApiUrl(`/api/videos/${videoId}`), {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ id_usuario: idUsuario }),
+  });
+
+  return parseResponse(response);
+}
