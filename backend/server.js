@@ -5,7 +5,6 @@ const bcrypt = require('bcryptjs');
 const { z } = require('zod');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
-const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
 require('dotenv').config();
 
