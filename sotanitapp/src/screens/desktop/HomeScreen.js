@@ -11,6 +11,8 @@ import MyVideosScreen from './MyVideosScreen';
 import FifaCard from '../../components/FifaCard';
 
 const qrCodeImage = require('../../../assets/qrcode.png');
+const copyrightLightImage = require('../../../assets/copyright/light.png');
+const copyrightDarkImage = require('../../../assets/copyright/dark.png');
 
 function parseCreatedAt(value) {
   const timestamp = new Date(value || 0).getTime();
@@ -141,7 +143,7 @@ function VideoPreviewCard({ video, colors, typography, textScale, onPress }) {
 }
 
 export default function HomeScreen({ navigation, route }) {
-  const { colors, spacing, typography, textScale } = useAppTheme();
+  const { colors, spacing, typography, textScale, darkMode, highContrast } = useAppTheme();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const categorySelectorRef = useRef(null);
   const [videos, setVideos] = useState([]);
@@ -219,6 +221,7 @@ export default function HomeScreen({ navigation, route }) {
   );
 
   const selectedCategoryLabel = selectedCategory || 'Últimas Subidas';
+  const copyrightSource = darkMode || highContrast ? copyrightDarkImage : copyrightLightImage;
   const popupRoute = useMemo(() => ({ params: { videoId: popupVideoId, sourceTab: 'ranking' } }), [popupVideoId]);
   const popupNavigation = useMemo(() => ({
     goBack: () => setShowVideoPopup(false),
@@ -361,7 +364,7 @@ export default function HomeScreen({ navigation, route }) {
               <Text
                 style={{
                   color: colors.text,
-                  fontSize: typography.sizes.lg * textScale,
+                  fontSize: typography.sizes.lg * textScale * 1.1,
                   fontWeight: typography.weights.semibold,
                   fontFamily: typography.families.nougat,
                   flex: 1,
@@ -375,6 +378,7 @@ export default function HomeScreen({ navigation, route }) {
 
             <View style={styles.qrBlock}>
               <Image source={qrCodeImage} style={styles.qrImage} resizeMode="contain" />
+              <Image source={copyrightSource} style={styles.copyrightImage} resizeMode="contain" />
             </View>
           </View>
         </View>
@@ -507,7 +511,7 @@ export default function HomeScreen({ navigation, route }) {
                     { opacity: pressed ? 0.75 : 1, borderBottomColor: colors.border },
                   ]}
                 >
-                  <Text style={{ color: colors.text, fontWeight: typography.weights.semibold, fontFamily: typography.families.nougat, fontSize: typography.sizes.lg * textScale }}>
+                  <Text style={{ color: colors.text, fontWeight: typography.weights.semibold, fontFamily: typography.families.nougat, fontSize: typography.sizes.lg * textScale * 1.1 }}>
                     Últimas Subidas
                   </Text>
                 </Pressable>
@@ -524,7 +528,7 @@ export default function HomeScreen({ navigation, route }) {
                       { opacity: pressed ? 0.75 : 1, borderBottomColor: colors.border },
                     ]}
                   >
-                    <Text style={{ color: colors.text, fontFamily: typography.families.nougat, fontSize: typography.sizes.lg * textScale }}>
+                    <Text style={{ color: colors.text, fontFamily: typography.families.nougat, fontSize: typography.sizes.lg * textScale * 1.1 }}>
                       {String(item)}
                     </Text>
                   </Pressable>
@@ -569,11 +573,16 @@ const styles = StyleSheet.create({
   qrBlock: {
     width: '100%',
     alignItems: 'center',
-    marginTop: 50,
+    marginTop: 30,
   },
   qrImage: {
     width: 500,
     height: 500,
+  },
+  copyrightImage: {
+    width: '85%',
+    height: 168,
+    marginTop: 20,
   },
   feedColumnsWrapper: {
     width: '66.6667%',

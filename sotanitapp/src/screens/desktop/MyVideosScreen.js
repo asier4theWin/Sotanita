@@ -1092,29 +1092,6 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
             windowSize={3}
             removeClippedSubviews={false}
           />
-          {pendingDeleteComment ? (
-            <View style={[styles.deleteConfirmOverlay, { backgroundColor: colors.overlay }]}> 
-              <View style={[styles.deleteConfirmCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
-                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16, marginBottom: 8 }}>
-                  Desea borrar el comentario
-                </Text>
-                <View style={styles.deleteConfirmActions}>
-                  <Pressable
-                    style={[styles.deleteConfirmButton, { backgroundColor: colors.surfaceElevated }]}
-                    onPress={() => setPendingDeleteComment(null)}
-                  >
-                    <Text style={{ color: colors.text, fontWeight: '600' }}>Cancelar</Text>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.deleteConfirmButton, { backgroundColor: colors.danger }]}
-                    onPress={confirmDeleteComment}
-                  >
-                    <Text style={{ color: colors.white, fontWeight: '700' }}>Borrar</Text>
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-          ) : null}
           {mediaUrls.length > 1 ? (
             <>
               <Pressable
@@ -1376,6 +1353,36 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
           {renderEmbeddedCommentsPanel()}
         </View>
 
+        <Modal
+          visible={Boolean(pendingDeleteComment)}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setPendingDeleteComment(null)}
+        >
+          <View style={[styles.deleteConfirmOverlay, { backgroundColor: colors.overlay }]}> 
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => setPendingDeleteComment(null)} />
+            <View style={[styles.deleteConfirmCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16, marginBottom: 8 }}>
+                Desea borrar el comentario
+              </Text>
+              <View style={styles.deleteConfirmActions}>
+                <Pressable
+                  style={[styles.deleteConfirmButton, { backgroundColor: colors.surfaceElevated }]}
+                  onPress={() => setPendingDeleteComment(null)}
+                >
+                  <Text style={{ color: colors.text, fontWeight: '600' }}>Cancelar</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.deleteConfirmButton, { backgroundColor: colors.danger }]}
+                  onPress={confirmDeleteComment}
+                >
+                  <Text style={{ color: colors.white, fontWeight: '700' }}>Borrar</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
         <Modal visible={showShare} transparent animationType="fade" onRequestClose={closeShareModal}>
           <Pressable style={styles.shareOverlay} onPress={closeShareModal}>
             <Pressable style={[styles.shareCard, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => {}}>
@@ -1442,7 +1449,13 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
         </Modal>
 
         <Modal visible={Boolean(pendingDeleteVideo)} transparent animationType="fade" onRequestClose={() => setPendingDeleteVideo(null)}>
-          <Pressable style={[styles.overlay, { backgroundColor: colors.overlay }]} onPress={() => setPendingDeleteVideo(null)}>
+          <Pressable
+            style={[
+              styles.overlay,
+              { backgroundColor: colors.overlay, justifyContent: 'center', alignItems: 'center' },
+            ]}
+            onPress={() => setPendingDeleteVideo(null)}
+          >
             <Pressable style={[styles.dialog, { backgroundColor: colors.surface }]} onPress={() => {}}>
               <Text style={{ color: colors.text, fontWeight: typography.weights.bold, fontSize: typography.sizes.lg * textScale, marginBottom: 8 }}>
                 Eliminar video?
@@ -1952,7 +1965,13 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
       </Modal>
 
       <Modal visible={Boolean(pendingDeleteVideo)} transparent animationType="fade" onRequestClose={() => setPendingDeleteVideo(null)}>
-        <Pressable style={[styles.overlay, { backgroundColor: colors.overlay }]} onPress={() => setPendingDeleteVideo(null)}>
+        <Pressable
+          style={[
+            styles.overlay,
+            { backgroundColor: colors.overlay, justifyContent: 'center', alignItems: 'center' },
+          ]}
+          onPress={() => setPendingDeleteVideo(null)}
+        >
           <Pressable style={[styles.dialog, { backgroundColor: colors.surface }]} onPress={() => {}}>
             <Text style={{ color: colors.text, fontWeight: typography.weights.bold, fontSize: typography.sizes.lg * textScale, marginBottom: 8 }}>
               Eliminar video?
@@ -2326,6 +2345,8 @@ const styles = StyleSheet.create({
     margin: 20,
     borderRadius: 18,
     padding: 18,
+    width: '40%',
+    alignSelf: 'center',
   },
   dialogActions: {
     flexDirection: 'row',

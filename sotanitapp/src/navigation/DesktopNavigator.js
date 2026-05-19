@@ -109,7 +109,7 @@ function DesktopNavBar({ navigation }) {
   const navBarBackground = darkMode ? colors.surface : colors.primary;
   const navTextColor = darkMode ? colors.white : colors.white;
   const navIconColor = darkMode ? colors.white : colors.white;
-  const navHoverColor = darkMode ? colors.primary : '#1e40af'; // Verde (oscuro) -> Azul oscuro (claro)
+  const navHoverColor = darkMode ? colors.primary : '#111827';
   const navHoverColorContrast = highContrast ? '#22c55e' : navHoverColor;
 
   const navigateToMainTab = useCallback((screenName) => {
@@ -319,7 +319,7 @@ function DesktopNavBar({ navigation }) {
           >
             <Animated.Text
               style={{
-                color: hoverItem === 'home' ? (highContrast ? '#22c55e' : (darkMode ? colors.primary : '#1e40af')) : navTextColor,
+                color: hoverItem === 'home' ? navHoverColorContrast : navTextColor,
                 fontSize: typography.sizes.xl * textScale * 1.08,
                 fontWeight: typography.weights.bold,
                 fontFamily: typography.families.nougat,
@@ -344,7 +344,7 @@ function DesktopNavBar({ navigation }) {
           >
             <Animated.Text
               style={{
-                color: hoverItem === 'ranking' ? (highContrast ? '#22c55e' : (darkMode ? colors.primary : '#1e40af')) : navTextColor,
+                color: hoverItem === 'ranking' ? navHoverColorContrast : navTextColor,
                 fontSize: typography.sizes.xl * textScale * 1.08,
                 fontWeight: typography.weights.bold,
                 fontFamily: typography.families.nougat,
@@ -402,7 +402,7 @@ function DesktopNavBar({ navigation }) {
           >
             <Animated.Text
               style={{
-                color: hoverItem === 'upload' ? (highContrast ? '#22c55e' : (darkMode ? colors.primary : '#1e40af')) : navTextColor,
+                color: hoverItem === 'upload' ? navHoverColorContrast : navTextColor,
                 fontSize: typography.sizes.xl * textScale * 1.08,
                 fontWeight: typography.weights.bold,
                 fontFamily: typography.families.nougat,
@@ -435,13 +435,13 @@ function DesktopNavBar({ navigation }) {
                 <Ionicons 
                   name="notifications" 
                   size={24} 
-                  color={hoverItem === 'notifications' ? (highContrast ? '#22c55e' : (darkMode ? colors.primary : '#1e40af')) : navIconColor}
+                  color={hoverItem === 'notifications' ? navHoverColorContrast : navIconColor}
                 />
                 {unreadCount > 0 && (
                   <View
                     style={[
                       styles.badge,
-                      { backgroundColor: colors.primary },
+                      { backgroundColor: darkMode ? colors.primary : '#111827' },
                     ]}
                   >
                     <Text
@@ -480,7 +480,7 @@ function DesktopNavBar({ navigation }) {
                 <Ionicons 
                   name="settings" 
                   size={24} 
-                  color={hoverItem === 'settings' ? (highContrast ? '#22c55e' : (darkMode ? colors.primary : '#1e40af')) : navIconColor}
+                  color={hoverItem === 'settings' ? navHoverColorContrast : navIconColor}
                 />
               </Pressable>
             </Animated.View>
