@@ -26,19 +26,6 @@ export default function WelcomeScreen({ navigation }) {
       <View style={[styles.container, { padding: spacing.xl }]}> 
         <View style={styles.logoBlock}>
           <Image source={appLogo} style={styles.logoImage} resizeMode="contain" />
-          <Text
-            style={{
-              color: colors.text,
-              fontSize: typography.sizes.hero * 1.3 * textScale,
-              fontWeight: typography.weights.bold,
-              fontFamily: typography.families.nougat,
-              textAlign: 'center',
-              transform: [{ scaleY: 1.12 }],
-              letterSpacing: -0.8,
-            }}
-          >
-            AMANTES DEL MAL FUTBOL
-          </Text>
           <Text style={{ color: colors.primary, fontSize: typography.sizes.lg * textScale }}>
             Cuando las jugadas están bien... pa no verlas.
           </Text>
