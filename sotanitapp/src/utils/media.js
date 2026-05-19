@@ -1,5 +1,6 @@
 import React, { useImperativeHandle } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { resolveApiBaseUrl } from '../api/backend';
 
 let ExpoAV = null;
 
@@ -17,9 +18,8 @@ const ResizeMode = ExpoAV?.ResizeMode || {
 };
 
 const CLOUDINARY_VIDEO_MARKER = '/video/upload/';
-const STREAMING_TRANSFORM = 'f_mp4,fl_progressive,so_0,q_auto';
-const RAW_BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
-const BACKEND_URL = RAW_BACKEND_URL.replace(/\/+$/, '');
+const STREAMING_TRANSFORM = 'f_mp4,vc_h264,ac_aac,fl_progressive,so_0,q_auto';
+const BACKEND_URL = resolveApiBaseUrl();
 
 function isLikelyVideoUrl(url) {
   const value = String(url || '').toLowerCase();
@@ -51,7 +51,7 @@ function getStreamingVideoUrl(url) {
   }
 
   if (firstSegment.includes('f_')) {
-    const merged = `${firstSegment},fl_progressive,so_0,q_auto`;
+    const merged = `${firstSegment},vc_h264,ac_aac,fl_progressive,so_0,q_auto`;
     return `${prefix}${merged}/${segments.slice(1).join('/')}`;
   }
 

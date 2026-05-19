@@ -147,7 +147,7 @@ function isLikelyImageUrl(url) {
 }
 
 const CLOUDINARY_VIDEO_MARKER = '/video/upload/';
-const STREAMING_TRANSFORM = 'f_mp4,fl_progressive,so_0,q_auto';
+const STREAMING_TRANSFORM = 'f_mp4,vc_h264,ac_aac,fl_progressive,so_0,q_auto';
 
 function getStreamingCloudinaryUrl(url) {
     const raw = String(url || '').trim();
@@ -169,7 +169,7 @@ function getStreamingCloudinaryUrl(url) {
     }
 
     if (firstSegment.includes('f_')) {
-        const merged = `${firstSegment},fl_progressive,so_0,q_auto`;
+        const merged = `${firstSegment},vc_h264,ac_aac,fl_progressive,so_0,q_auto`;
         return `${prefix}${merged}/${segments.slice(1).join('/')}`;
     }
 

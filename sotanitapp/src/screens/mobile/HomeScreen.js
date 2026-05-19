@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Audio, ResizeMode, Video, getStreamingVideoSourceFromVideo } from '../../utils/media';
 import { useAppTheme } from '../../hooks/useAppTheme';
-import { getAllVideos, getVideos, getCategories, likeVideo, unlikeVideo, getVideoComments, postVideoComment, uploadCommentAudio, deleteVideoComment, deleteVideo, getTeamById, postForumMessage } from '../../api/backend';
+import { getAllVideos, getVideos, getCategories, likeVideo, unlikeVideo, getVideoComments, postVideoComment, uploadCommentAudio, deleteVideoComment, deleteVideo, getTeamById, postForumMessage, resolveApiBaseUrl } from '../../api/backend';
 import { useAuth } from '../../context/AuthContext';
 import { formatLikes } from '../../utils/format';
 import FifaCard from '../../components/FifaCard';
@@ -47,10 +47,10 @@ const normalizeCloudinaryVideoUrl = (url) => {
   }
 
   if (afterMarker.startsWith('f_') || afterMarker.startsWith('c_') || afterMarker.startsWith('w_')) {
-    return `${raw.slice(0, markerIndex + marker.length)}fl_progressive,so_0,q_auto/${afterMarker}`;
+    return `${raw.slice(0, markerIndex + marker.length)}vc_h264,ac_aac,fl_progressive,so_0,q_auto/${afterMarker}`;
   }
 
-  const transform = 'f_mp4,c_pad,w_1080,h_1920,ar_9:16,fl_progressive,so_0,q_auto';
+  const transform = 'f_mp4,vc_h264,ac_aac,c_pad,w_1080,h_1920,ar_9:16,fl_progressive,so_0,q_auto';
   return `${raw.slice(0, markerIndex + marker.length)}${transform}/${afterMarker}`;
 };
 
@@ -75,7 +75,7 @@ const parseCarouselIndex = (value) => {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 };
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = resolveApiBaseUrl();
 const FRONTEND_URL = process.env.EXPO_PUBLIC_FRONTEND_URL || 'https://sotanita.vercel.app';
 
 
@@ -198,6 +198,7 @@ const FeedVideoItem = ({
     });
   }, [tapFeedbackAnim]);
 
+    const posterUrl = video.thumbnailUrl || video.posterUrl || video.previewUrl || '';
   useEffect(() => {
     if (!isVideo) return;
     // Asegurar que el audio se escuche en iOS incluso con el boton de silencio
@@ -278,7 +279,7 @@ const FeedVideoItem = ({
             autoPlay={isActive && !isAudioPlaying && !isRecording}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
-        ) : (
+        ) : isActive ? (
           <Video
             ref={videoRef}
             style={videoSurfaceStyle}
@@ -294,6 +295,17 @@ const FeedVideoItem = ({
               }
             }}
           />
+        ) : posterUrl ? (
+          <Image
+            source={{ uri: posterUrl }}
+            style={[StyleSheet.absoluteFillObject, styles.videoPoster]}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[styles.videoPoster, styles.videoPosterFallback]}>
+            <Ionicons name="play-circle-outline" size={60} color={`${colors.white}CC`} />
+            <Text style={[styles.posterHint, { color: `${colors.white}CC`, fontSize: typography.sizes.sm * textScale }]}>Desliza para reproducir</Text>
+          </View>
         )
       ) : mediaUrls.length > 1 ? (
         <MediaCarousel
@@ -1954,6 +1966,20 @@ const styles = StyleSheet.create({
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 200 },
   emptyText: { fontSize: 16, fontWeight: '600' },
   videoContainer: { width: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: '#000', overflow: 'hidden' },
+  videoPoster: {
+    width: '100%',
+    height: '100%',
+  },
+  videoPosterFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(15,23,42,0.92)',
+    gap: 8,
+  },
+  posterHint: {
+    fontWeight: '700',
+    letterSpacing: 0.4,
+  },
   mediaContainer: { width: '100%', backgroundColor: '#000', overflow: 'hidden' },
   videoSurface: { width: '100%', height: '100%' },
   dotsRow: { position: 'absolute', bottom: 18, width: '100%', flexDirection: 'row', justifyContent: 'center', gap: 6 },

@@ -1,7 +1,27 @@
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+const DEFAULT_API_BASE_URL = 'https://sotanita-backend.onrender.com';
+
+function normalizeBaseUrl(value) {
+  return String(value || '').trim().replace(/\/+$/, '');
+}
+
+export function resolveApiBaseUrl() {
+  const envBaseUrl = normalizeBaseUrl(process.env.EXPO_PUBLIC_API_URL || process.env.EXPO_PUBLIC_BACKEND_URL);
+  if (envBaseUrl) {
+    return envBaseUrl;
+  }
+
+  if (typeof window !== 'undefined' && window?.location?.hostname) {
+    const hostname = String(window.location.hostname).toLowerCase();
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://localhost:5000';
+    }
+  }
+
+  return DEFAULT_API_BASE_URL;
+}
 
 function buildApiUrl(path) {
-  const normalizedBase = API_BASE_URL.replace(/\/+$/, '');
+  const normalizedBase = resolveApiBaseUrl();
 
   // Soporta EXPO_PUBLIC_API_URL con o sin "/api" al final.
   if (normalizedBase.endsWith('/api') && path.startsWith('/api/')) {
