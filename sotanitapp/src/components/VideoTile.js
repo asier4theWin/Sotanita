@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ResizeMode, Video } from '../utils/media';
+import { ResizeMode, Video, getStreamingVideoUrl } from '../utils/media';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { useAppTheme } from '../hooks/useAppTheme';
 import { formatLikes } from '../utils/format';
@@ -18,19 +18,21 @@ export default function VideoTile({ item, onPress, variant = 'uploaded' }) {
   const isCarousel = mediaType === 'carousel' || mediaUrls.length > 1;
   const isImage = mediaType === 'image' || isCarousel;
   const isVideo = !isImage;
+  const primaryMediaUrl = mediaUrls[0] || '';
+  const streamingUrl = isVideo ? getStreamingVideoUrl(primaryMediaUrl) : primaryMediaUrl;
   const [videoThumbnail, setVideoThumbnail] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
 
     const loadThumbnail = async () => {
-      if (!isVideo || !mediaUrls[0]) {
+      if (!isVideo || !primaryMediaUrl) {
         if (isMounted) setVideoThumbnail(null);
         return;
       }
 
       try {
-        const result = await VideoThumbnails.getThumbnailAsync(mediaUrls[0], { time: 0 });
+        const result = await VideoThumbnails.getThumbnailAsync(primaryMediaUrl, { time: 0 });
         if (isMounted) {
           setVideoThumbnail(result?.uri || null);
         }
@@ -52,13 +54,13 @@ export default function VideoTile({ item, onPress, variant = 'uploaded' }) {
     <Pressable onPress={onPress} style={[styles.tile, { backgroundColor: colors.surface }]}> 
       <View style={styles.preview}>
         {isImage ? (
-          <Image source={{ uri: mediaUrls[0] }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+          <Image source={{ uri: primaryMediaUrl }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
         ) : isVideo ? (
           videoThumbnail ? (
             <Image source={{ uri: videoThumbnail }} style={StyleSheet.absoluteFillObject} resizeMode="stretch" />
           ) : Platform.OS === 'web' ? (
             <video
-              src={mediaUrls[0]}
+              src={streamingUrl}
               muted
               playsInline
               preload="metadata"
@@ -75,7 +77,7 @@ export default function VideoTile({ item, onPress, variant = 'uploaded' }) {
           ) : (
             <Video
               ref={videoRef}
-              source={{ uri: mediaUrls[0] }}
+              source={{ uri: streamingUrl }}
               style={[StyleSheet.absoluteFillObject, styles.media]}
               resizeMode={ResizeMode.CONTAIN}
               shouldPlay={false}

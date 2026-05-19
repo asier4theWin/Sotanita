@@ -20,7 +20,7 @@ import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Audio, Video, ResizeMode } from '../../utils/media';
+import { Audio, Video, ResizeMode, getStreamingVideoUrl } from '../../utils/media';
 import { useAuth } from '../../context/AuthContext';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import FifaCard from '../../components/FifaCard';
@@ -205,6 +205,10 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
         ? 'video'
         : 'image');
   const isCarousel = ['carousel', 'carrusel'].includes(mediaType) || mediaUrls.length > 1;
+  const streamingVideoUrl = useMemo(
+    () => (mediaType === 'video' ? getStreamingVideoUrl(activeVideo?.url) : activeVideo?.url),
+    [activeVideo?.url, mediaType]
+  );
   const uploaderCard = activeVideo?.uploaderCard || null;
   const uploaderName = uploaderCard?.username || (activeVideo?.id_usuario ? String(activeVideo.id_usuario).split('@')[0] : 'usuario');
   const canCycleVideos = videos.length > 1;
@@ -988,16 +992,17 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
         >
           {Platform.OS === 'web' ? (
             <video
-              src={activeVideo.url}
+              src={streamingVideoUrl}
               autoPlay
               loop
               playsInline
+              preload="metadata"
               style={styles.webVideo}
             />
           ) : (
             <Video
               style={[StyleSheet.absoluteFillObject, styles.videoFill]}
-              source={{ uri: activeVideo.url }}
+              source={{ uri: streamingVideoUrl }}
               resizeMode={ResizeMode.STRETCH}
               isLooping
               shouldPlay
@@ -1174,7 +1179,7 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
         }}
       >
         <Image
-          source={{ uri: activeVideo.url }}
+          source={{ uri: streamingVideoUrl }}
           style={StyleSheet.absoluteFillObject}
           resizeMode="cover"
         />
@@ -1534,7 +1539,7 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
             >
               <Video
                 style={StyleSheet.absoluteFillObject}
-                source={{ uri: activeVideo.url }}
+                source={{ uri: streamingVideoUrl }}
                 resizeMode={ResizeMode.COVER}
                 isLooping
                 shouldPlay
@@ -1701,7 +1706,7 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
               }}
             >
               <Image
-                source={{ uri: activeVideo.url }}
+                source={{ uri: streamingVideoUrl }}
                 style={StyleSheet.absoluteFillObject}
                 resizeMode="cover"
               />

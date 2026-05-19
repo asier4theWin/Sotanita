@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Image, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Video, ResizeMode } from '../../utils/media';
+import { Video, ResizeMode, getStreamingVideoUrl } from '../../utils/media';
 import { useFocusEffect } from '@react-navigation/native';
 import { getAllVideos, getCategories } from '../../api/backend';
 import { useAppTheme } from '../../hooks/useAppTheme';
@@ -38,8 +38,8 @@ function getPreviewUrl(video) {
 }
 
 function VideoPreviewCard({ video, colors, typography, textScale, onPress }) {
-  const previewUrl = getPreviewUrl(video);
   const imagePreview = isImageMedia(video);
+  const previewUrl = imagePreview ? getPreviewUrl(video) : getStreamingVideoUrl(getPreviewUrl(video));
   const [hovered, setHovered] = useState(false);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 

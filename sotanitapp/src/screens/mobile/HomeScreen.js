@@ -6,7 +6,7 @@ import * as MediaLibrary from 'expo-media-library';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Audio, ResizeMode, Video } from '../../utils/media';
+import { Audio, ResizeMode, Video, getStreamingVideoUrl } from '../../utils/media';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import { getAllVideos, getVideos, getCategories, likeVideo, unlikeVideo, getVideoComments, postVideoComment, uploadCommentAudio, deleteVideoComment, deleteVideo, getTeamById, postForumMessage } from '../../api/backend';
 import { useAuth } from '../../context/AuthContext';
@@ -42,11 +42,15 @@ const normalizeCloudinaryVideoUrl = (url) => {
   if (markerIndex === -1) return raw;
 
   const afterMarker = raw.slice(markerIndex + marker.length);
-  if (afterMarker.startsWith('f_') || afterMarker.startsWith('c_') || afterMarker.startsWith('w_')) {
+  if (afterMarker.includes('fl_progressive')) {
     return raw;
   }
 
-  const transform = 'f_mp4,c_pad,w_1080,h_1920,ar_9:16,so_0,q_auto';
+  if (afterMarker.startsWith('f_') || afterMarker.startsWith('c_') || afterMarker.startsWith('w_')) {
+    return `${raw.slice(0, markerIndex + marker.length)}fl_progressive,so_0,q_auto/${afterMarker}`;
+  }
+
+  const transform = 'f_mp4,c_pad,w_1080,h_1920,ar_9:16,fl_progressive,so_0,q_auto';
   return `${raw.slice(0, markerIndex + marker.length)}${transform}/${afterMarker}`;
 };
 
@@ -161,6 +165,7 @@ const FeedVideoItem = ({
   const [videoNatural, setVideoNatural] = useState(null);
   const gifMaxSize = Math.round(screenWidth * 0.65);
   const videoUrl = useMemo(() => normalizeCloudinaryVideoUrl(video.url), [video.url]);
+  const streamingVideoUrl = useMemo(() => getStreamingVideoUrl(videoUrl), [videoUrl]);
   const mediaUrls = Array.isArray(video.mediaUrls) && video.mediaUrls.length
     ? video.mediaUrls
     : video.url
@@ -262,10 +267,11 @@ const FeedVideoItem = ({
       {isVideo ? (
         Platform.OS === 'web' ? (
           <video
-            src={videoUrl}
+            src={streamingVideoUrl}
             muted={!isActive || isAudioPlaying || isRecording}
             loop
             playsInline
+            preload="metadata"
             autoPlay={isActive && !isAudioPlaying && !isRecording}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
@@ -273,7 +279,7 @@ const FeedVideoItem = ({
           <Video
             ref={videoRef}
             style={videoSurfaceStyle}
-            source={{ uri: videoUrl }}
+            source={{ uri: streamingVideoUrl }}
             resizeMode={ResizeMode.COVER}
             isLooping
             shouldPlay={isActive && !isAudioPlaying && !isRecording}
