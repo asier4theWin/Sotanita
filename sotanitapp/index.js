@@ -35,6 +35,16 @@ function getDeviceLabel() {
 
 console.log(`DISPOSITIVO INICIAL: ${getDeviceLabel()}`);
 
+if (Platform.OS === 'web' && typeof window !== 'undefined') {
+	window.addEventListener('load', () => {
+		if ('serviceWorker' in navigator) {
+			navigator.serviceWorker.register('/service-worker.js').catch((error) => {
+				console.warn('Service worker registration failed:', error);
+			});
+		}
+	});
+}
+
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);
 // It also ensures that whether you load the app in Expo Go or in a native build,
 // the environment is set up appropriately

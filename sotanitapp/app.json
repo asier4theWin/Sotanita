@@ -25,7 +25,15 @@
       "package": "com.anonymous.sotanitapp"
     },
     "web": {
-      "favicon": "./assets/LOGO.png"
+      "favicon": "./assets/favicon.png",
+      "name": "Sotanitapp",
+      "shortName": "Sotanita",
+      "lang": "es-ES",
+      "display": "standalone",
+      "backgroundColor": "#020617",
+      "themeColor": "#16A34A",
+      "startUrl": "/",
+      "scope": "/"
     },
     "plugins": [
       "expo-sharing"
