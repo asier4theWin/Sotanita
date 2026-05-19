@@ -334,53 +334,48 @@ export default function HomeScreen({ navigation, route }) {
     setShowCategoryPicker(true);
   }, []);
 
+  const categoryPickerTop = categoryPickerAnchor.y + categoryPickerAnchor.height + 6;
+  const categoryPickerMaxHeight = Math.max(
+    320,
+    Math.min(560, windowHeight - categoryPickerTop - 24)
+  );
+
   return (
     <ScreenGradient>
       <View style={styles.root}>
         <View style={[styles.leftPanel, { borderRightColor: colors.border, paddingHorizontal: spacing.lg, paddingTop: spacing.xl }]}> 
-          <Pressable
-            ref={categorySelectorRef}
-            onPress={openCategoryPicker}
-            style={({ pressed }) => [
-              styles.categorySelector,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                opacity: pressed ? 0.85 : 1,
-                paddingHorizontal: spacing.md,
-              },
-            ]}
-          >
-            <Text
-              style={{
-                color: colors.text,
-                fontSize: typography.sizes.md * textScale,
-                fontWeight: typography.weights.semibold,
-                fontFamily: typography.families.nougat,
-                flex: 1,
-              }}
-              numberOfLines={1}
+          <View style={styles.leftPanelTopStack}>
+            <Pressable
+              ref={categorySelectorRef}
+              onPress={openCategoryPicker}
+              style={({ pressed }) => [
+                styles.categorySelector,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.85 : 1,
+                  paddingHorizontal: spacing.md,
+                },
+              ]}
             >
-              {selectedCategoryLabel}
-            </Text>
-            <Ionicons name="chevron-down" size={20} color={colors.textMuted} />
-          </Pressable>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontSize: typography.sizes.lg * textScale,
+                  fontWeight: typography.weights.semibold,
+                  fontFamily: typography.families.nougat,
+                  flex: 1,
+                }}
+                numberOfLines={1}
+              >
+                {selectedCategoryLabel}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color={colors.textMuted} />
+            </Pressable>
 
-          <View style={styles.qrBlock}>
-            <Text
-              style={{
-                color: colors.text,
-                fontSize: typography.sizes.xl * textScale,
-                fontWeight: typography.weights.bold,
-                fontFamily: typography.families.nougat,
-                textAlign: 'center',
-                marginBottom: spacing.md,
-                paddingHorizontal: spacing.sm,
-              }}
-            >
-              Prueba la Aplicacion Movil desde aqui
-            </Text>
-            <Image source={qrCodeImage} style={styles.qrImage} resizeMode="contain" />
+            <View style={styles.qrBlock}>
+              <Image source={qrCodeImage} style={styles.qrImage} resizeMode="contain" />
+            </View>
           </View>
         </View>
 
@@ -492,31 +487,19 @@ export default function HomeScreen({ navigation, route }) {
                   backgroundColor: colors.surface,
                   borderColor: colors.border,
                   left: categoryPickerAnchor.x,
-                  top: categoryPickerAnchor.y + categoryPickerAnchor.height + 6,
+                  top: categoryPickerTop,
                   width: categoryPickerAnchor.width,
+                  maxHeight: categoryPickerMaxHeight,
                 },
               ]}
             >
-              <Pressable
-                onPress={() => {
-                  setSelectedCategory('');
-                  setShowCategoryPicker(false);
-                }}
-                style={({ pressed }) => [
-                  styles.modalItem,
-                  { opacity: pressed ? 0.75 : 1, borderBottomColor: colors.border },
-                ]}
+              <ScrollView
+                showsVerticalScrollIndicator
+                contentContainerStyle={styles.modalScrollContent}
               >
-                <Text style={{ color: colors.text, fontWeight: typography.weights.semibold, fontFamily: typography.families.nougat, fontSize: typography.sizes.md * textScale }}>
-                  Últimas Subidas
-                </Text>
-              </Pressable>
-
-              {categories.map((item) => (
                 <Pressable
-                  key={String(item)}
                   onPress={() => {
-                    setSelectedCategory(String(item));
+                    setSelectedCategory('');
                     setShowCategoryPicker(false);
                   }}
                   style={({ pressed }) => [
@@ -524,11 +507,29 @@ export default function HomeScreen({ navigation, route }) {
                     { opacity: pressed ? 0.75 : 1, borderBottomColor: colors.border },
                   ]}
                 >
-                  <Text style={{ color: colors.text, fontFamily: typography.families.nougat, fontSize: typography.sizes.md * textScale }}>
-                    {String(item)}
+                  <Text style={{ color: colors.text, fontWeight: typography.weights.semibold, fontFamily: typography.families.nougat, fontSize: typography.sizes.lg * textScale }}>
+                    Últimas Subidas
                   </Text>
                 </Pressable>
-              ))}
+
+                {categories.map((item) => (
+                  <Pressable
+                    key={String(item)}
+                    onPress={() => {
+                      setSelectedCategory(String(item));
+                      setShowCategoryPicker(false);
+                    }}
+                    style={({ pressed }) => [
+                      styles.modalItem,
+                      { opacity: pressed ? 0.75 : 1, borderBottomColor: colors.border },
+                    ]}
+                  >
+                    <Text style={{ color: colors.text, fontFamily: typography.families.nougat, fontSize: typography.sizes.lg * textScale }}>
+                      {String(item)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
             </Pressable>
           </Pressable>
         </Modal>
@@ -547,6 +548,15 @@ const styles = StyleSheet.create({
   leftPanel: {
     width: '33.3333%',
     borderRightWidth: 1,
+    justifyContent: 'flex-start',
+    alignItems: 'stretch',
+  },
+  leftPanelTopStack: {
+    width: '100%',
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 8,
+    flexGrow: 0,
   },
   categorySelector: {
     minHeight: 50,
@@ -557,14 +567,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   qrBlock: {
-    marginTop: 28,
+    width: '100%',
     alignItems: 'center',
-    justifyContent: 'center',
+    marginTop: 50,
   },
   qrImage: {
-    width: '82%',
-    aspectRatio: 1,
-    maxWidth: 320,
+    width: 500,
+    height: 500,
   },
   feedColumnsWrapper: {
     width: '66.6667%',
@@ -649,10 +658,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 14,
     overflow: 'hidden',
-    maxHeight: 320,
+  },
+  modalScrollContent: {
+    paddingBottom: 2,
   },
   modalItem: {
-    minHeight: 48,
+    minHeight: 56,
     borderBottomWidth: 1,
     justifyContent: 'center',
     paddingHorizontal: 16,
