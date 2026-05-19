@@ -17,7 +17,9 @@ const ResizeMode = ExpoAV?.ResizeMode || {
 };
 
 const CLOUDINARY_VIDEO_MARKER = '/video/upload/';
-const STREAMING_TRANSFORM = 'fl_progressive,so_0,q_auto';
+const STREAMING_TRANSFORM = 'f_mp4,fl_progressive,so_0,q_auto';
+const RAW_BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
+const BACKEND_URL = RAW_BACKEND_URL.replace(/\/+$/, '');
 
 function isLikelyVideoUrl(url) {
   const value = String(url || '').toLowerCase();
@@ -40,7 +42,37 @@ function getStreamingVideoUrl(url) {
   if (afterMarker.includes('fl_progressive')) return raw;
 
   const prefix = raw.slice(0, markerIndex + CLOUDINARY_VIDEO_MARKER.length);
+  const segments = afterMarker.split('/');
+  const firstSegment = segments[0] || '';
+  const hasVersionSegment = /^v\d+$/.test(firstSegment);
+
+  if (hasVersionSegment) {
+    return `${prefix}${STREAMING_TRANSFORM}/${afterMarker}`;
+  }
+
+  if (firstSegment.includes('f_')) {
+    const merged = `${firstSegment},fl_progressive,so_0,q_auto`;
+    return `${prefix}${merged}/${segments.slice(1).join('/')}`;
+  }
+
   return `${prefix}${STREAMING_TRANSFORM}/${afterMarker}`;
+}
+
+function getStreamingVideoSource({ videoId, url, mediaIndex }) {
+  const safeId = String(videoId || '').trim();
+  if (safeId && BACKEND_URL) {
+    const indexValue = Number.isFinite(mediaIndex) ? `?mediaIndex=${mediaIndex}` : '';
+    return `${BACKEND_URL}/api/videos/${encodeURIComponent(safeId)}/stream${indexValue}`;
+  }
+
+  return getStreamingVideoUrl(url);
+}
+
+function getStreamingVideoSourceFromVideo(video, mediaIndex, fallbackUrl) {
+  if (!video) return getStreamingVideoUrl(fallbackUrl || '');
+  const videoId = video?.id || video?._id || video?.videoId;
+  const url = fallbackUrl || video?.url || '';
+  return getStreamingVideoSource({ videoId, url, mediaIndex });
 }
 
 const FallbackVideo = React.forwardRef(({ style, ...props }, ref) => {
@@ -111,4 +143,13 @@ const styles = StyleSheet.create({
   },
 });
 
-export { Audio, ResizeMode, Video, hasNativeMediaSupport, getStreamingVideoUrl, isLikelyVideoUrl };
+export {
+  Audio,
+  ResizeMode,
+  Video,
+  hasNativeMediaSupport,
+  getStreamingVideoUrl,
+  getStreamingVideoSource,
+  getStreamingVideoSourceFromVideo,
+  isLikelyVideoUrl,
+};

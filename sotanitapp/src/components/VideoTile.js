@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ResizeMode, Video, getStreamingVideoUrl } from '../utils/media';
+import { ResizeMode, Video, getStreamingVideoSourceFromVideo } from '../utils/media';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { useAppTheme } from '../hooks/useAppTheme';
 import { formatLikes } from '../utils/format';
@@ -19,7 +19,9 @@ export default function VideoTile({ item, onPress, variant = 'uploaded' }) {
   const isImage = mediaType === 'image' || isCarousel;
   const isVideo = !isImage;
   const primaryMediaUrl = mediaUrls[0] || '';
-  const streamingUrl = isVideo ? getStreamingVideoUrl(primaryMediaUrl) : primaryMediaUrl;
+  const streamingUrl = isVideo
+    ? getStreamingVideoSourceFromVideo(item, 0, primaryMediaUrl)
+    : primaryMediaUrl;
   const [videoThumbnail, setVideoThumbnail] = useState(null);
 
   useEffect(() => {

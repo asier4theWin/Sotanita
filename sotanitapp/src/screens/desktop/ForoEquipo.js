@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import { getTeamById, getForumMessages, postForumMessage, uploadCommentAudio, deleteForumMessage } from '../../api/backend';
 import LoadingOverlay from '../../components/LoadingOverlay';
-import { Audio, ResizeMode, Video } from '../../utils/media';
+import { Audio, ResizeMode, Video, getStreamingVideoSource } from '../../utils/media';
 import { Ionicons } from '@expo/vector-icons';
 
 const isProbablyVideoUrl = (value) => {
@@ -433,6 +433,19 @@ export default function ForoEquipo({ route, navigation }) {
     const userDisplay = isMine ? 'Tú' : `@${item.user}`;
     const userTextAlign = isMine ? 'right' : 'left';
 
+    const shareVideoId = item.share?.videoId || item.share?.video_id || item.videoId || item.video_id;
+    const parsedCarouselIndex = Number.parseInt(
+      String(item.share?.carouselIndex ?? item.share?.carousel_index ?? item.share?.mediaIndex ?? item.share?.media_index ?? ''),
+      10
+    );
+    const shareMediaIndex = Number.isFinite(parsedCarouselIndex) && parsedCarouselIndex >= 0
+      ? parsedCarouselIndex
+      : undefined;
+    const shareThumbnailUrl = item.share?.thumbnailUrl || '';
+    const shareStreamUrl = isProbablyVideoUrl(shareThumbnailUrl)
+      ? getStreamingVideoSource({ videoId: shareVideoId, url: shareThumbnailUrl, mediaIndex: shareMediaIndex })
+      : shareThumbnailUrl;
+
     return (
       <View style={[containerStyle]}>
         <Text style={{ color: colors.textMuted, marginBottom: 4, textAlign: userTextAlign }}>{userDisplay}</Text>
@@ -457,31 +470,24 @@ export default function ForoEquipo({ route, navigation }) {
           <View style={{ flex: 1 }}>
             {item.type === 'share' || item.share ? (
               <Pressable onPress={() => {
-                const videoId = item.share?.videoId || item.share?.video_id || item.videoId || item.video_id;
-                const parsedCarouselIndex = Number.parseInt(
-                  String(item.share?.carouselIndex ?? item.share?.carousel_index ?? item.share?.mediaIndex ?? item.share?.media_index ?? ''),
-                  10
-                );
-                const carouselIndex = Number.isFinite(parsedCarouselIndex) && parsedCarouselIndex >= 0
-                  ? parsedCarouselIndex
-                  : null;
-                if (!videoId) return;
+                const carouselIndex = shareMediaIndex ?? null;
+                if (!shareVideoId) return;
                 try {
                   navigation.navigate('MainTabs', {
                     screen: 'Home',
                     params: carouselIndex != null
-                      ? { videoId: String(videoId), carouselIndex }
-                      : { videoId: String(videoId) },
+                      ? { videoId: String(shareVideoId), carouselIndex }
+                      : { videoId: String(shareVideoId) },
                   });
                 } catch (e) {
                   console.error('Error navegando al post desde foro', e);
                 }
               }} style={{ alignSelf: isMine ? 'flex-end' : 'flex-start' }}>
                 <View style={{ width: 112 * (textScale || 1), height: 178 * (textScale || 1), borderRadius: 16, overflow: 'hidden', backgroundColor: colors.surfaceElevated }}>
-                  {item.share?.thumbnailUrl ? (
-                    isProbablyVideoUrl(item.share.thumbnailUrl) ? (
+                  {shareThumbnailUrl ? (
+                    isProbablyVideoUrl(shareThumbnailUrl) ? (
                       <Video
-                        source={{ uri: item.share.thumbnailUrl }}
+                        source={{ uri: shareStreamUrl }}
                         style={{ width: '100%', height: '100%' }}
                         resizeMode={ResizeMode.COVER}
                         shouldPlay={false}

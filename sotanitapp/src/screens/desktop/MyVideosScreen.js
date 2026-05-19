@@ -20,7 +20,7 @@ import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Audio, Video, ResizeMode, getStreamingVideoUrl } from '../../utils/media';
+import { Audio, Video, ResizeMode, getStreamingVideoSourceFromVideo } from '../../utils/media';
 import { useAuth } from '../../context/AuthContext';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import FifaCard from '../../components/FifaCard';
@@ -206,8 +206,8 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
         : 'image');
   const isCarousel = ['carousel', 'carrusel'].includes(mediaType) || mediaUrls.length > 1;
   const streamingVideoUrl = useMemo(
-    () => (mediaType === 'video' ? getStreamingVideoUrl(activeVideo?.url) : activeVideo?.url),
-    [activeVideo?.url, mediaType]
+    () => (mediaType === 'video' ? getStreamingVideoSourceFromVideo(activeVideo, 0, activeVideo?.url) : activeVideo?.url),
+    [activeVideo, mediaType]
   );
   const uploaderCard = activeVideo?.uploaderCard || null;
   const uploaderName = uploaderCard?.username || (activeVideo?.id_usuario ? String(activeVideo.id_usuario).split('@')[0] : 'usuario');

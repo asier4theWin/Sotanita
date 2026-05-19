@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Video, ResizeMode, getStreamingVideoUrl } from '../../utils/media';
+import { Video, ResizeMode, getStreamingVideoSourceFromVideo } from '../../utils/media';
 import { useAuth } from '../../context/AuthContext';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import FifaCard from '../../components/FifaCard';
@@ -156,8 +156,8 @@ export default function MyVideosScreen({ navigation, route }) {
         : 'image');
   const isCarousel = ['carousel', 'carrusel'].includes(mediaType) || mediaUrls.length > 1;
   const streamingVideoUrl = useMemo(
-    () => (mediaType === 'video' ? getStreamingVideoUrl(activeVideo?.url) : activeVideo?.url),
-    [activeVideo?.url, mediaType]
+    () => (mediaType === 'video' ? getStreamingVideoSourceFromVideo(activeVideo, 0, activeVideo?.url) : activeVideo?.url),
+    [activeVideo, mediaType]
   );
   const sharePopupTitle = isCarousel
     ? 'COMPARTIR CARRUSEL'

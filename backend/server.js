@@ -146,6 +146,78 @@ function isLikelyImageUrl(url) {
     return value.endsWith('.jpg') || value.endsWith('.jpeg') || value.endsWith('.png') || value.endsWith('.webp') || value.endsWith('.gif') || value.endsWith('.bmp') || value.endsWith('.tiff');
 }
 
+const CLOUDINARY_VIDEO_MARKER = '/video/upload/';
+const STREAMING_TRANSFORM = 'f_mp4,fl_progressive,so_0,q_auto';
+
+function getStreamingCloudinaryUrl(url) {
+    const raw = String(url || '').trim();
+    if (!raw) return raw;
+
+    const markerIndex = raw.indexOf(CLOUDINARY_VIDEO_MARKER);
+    if (markerIndex === -1) return raw;
+
+    const afterMarker = raw.slice(markerIndex + CLOUDINARY_VIDEO_MARKER.length);
+    if (afterMarker.includes('fl_progressive')) return raw;
+
+    const prefix = raw.slice(0, markerIndex + CLOUDINARY_VIDEO_MARKER.length);
+    const segments = afterMarker.split('/');
+    const firstSegment = segments[0] || '';
+    const hasVersionSegment = /^v\d+$/.test(firstSegment);
+
+    if (hasVersionSegment) {
+        return `${prefix}${STREAMING_TRANSFORM}/${afterMarker}`;
+    }
+
+    if (firstSegment.includes('f_')) {
+        const merged = `${firstSegment},fl_progressive,so_0,q_auto`;
+        return `${prefix}${merged}/${segments.slice(1).join('/')}`;
+    }
+
+    return `${prefix}${STREAMING_TRANSFORM}/${afterMarker}`;
+}
+
+async function proxyRemoteStream(url, req, res, { headOnly = false } = {}) {
+    const rangeHeader = req.headers.range;
+    const headers = rangeHeader ? { Range: rangeHeader } : undefined;
+    const response = await fetch(url, {
+        method: headOnly ? 'HEAD' : 'GET',
+        headers,
+    });
+
+    if (!response.ok && response.status !== 206) {
+        res.status(502).json({ message: 'No se pudo obtener el video remoto' });
+        return;
+    }
+
+    const contentType = response.headers.get('content-type') || 'video/mp4';
+    const contentLength = response.headers.get('content-length');
+    const contentRange = response.headers.get('content-range');
+    const acceptRanges = response.headers.get('accept-ranges') || 'bytes';
+
+    res.status(response.status === 206 ? 206 : 200);
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Accept-Ranges', acceptRanges);
+    if (contentLength) {
+        res.setHeader('Content-Length', contentLength);
+    }
+    if (contentRange) {
+        res.setHeader('Content-Range', contentRange);
+    }
+
+    if (headOnly) {
+        res.end();
+        return;
+    }
+
+    if (!response.body) {
+        res.end();
+        return;
+    }
+
+    const nodeStream = Readable.fromWeb ? Readable.fromWeb(response.body) : response.body;
+    await pipeline(nodeStream, res);
+}
+
 function normalizeEvenDimension(value) {
     const safeValue = Math.max(2, Number(value) || 2);
     return safeValue % 2 === 0 ? safeValue : safeValue - 1;
@@ -1997,6 +2069,48 @@ async function handleLogin(req, res) {
 }
 
 app.post('/api/login', handleLogin);
+
+async function handleVideoStream(req, res, headOnly = false) {
+    try {
+        const { videoId } = req.params;
+        const video = await db.collection('videos').findOne(buildIdFilter(videoId));
+        const requestedIndex = Number.parseInt(String(req.query.mediaIndex ?? req.query.carouselIndex ?? ''), 10);
+        const mediaUrls = Array.isArray(video?.mediaUrls) && video.mediaUrls.length
+            ? video.mediaUrls
+            : video?.url
+                ? [video.url]
+                : [];
+        const safeIndex = Number.isFinite(requestedIndex) && requestedIndex >= 0
+            ? Math.min(requestedIndex, Math.max(mediaUrls.length - 1, 0))
+            : 0;
+        const primaryMediaUrl = mediaUrls[safeIndex] || video?.url;
+
+        if (!video || !primaryMediaUrl) {
+            return res.status(404).json({ message: 'Video no encontrado' });
+        }
+
+        const normalizedMediaType = String(video?.mediaType || '').toLowerCase();
+        const isImageMedia = normalizedMediaType === 'image'
+            || (normalizedMediaType === 'carousel' && !String(primaryMediaUrl || '').toLowerCase().match(/\.(mp4|mov|m4v|webm)(\?|$)/))
+            || isLikelyImageUrl(primaryMediaUrl);
+
+        if (isImageMedia) {
+            if (headOnly) {
+                return res.status(200).end();
+            }
+            return res.redirect(primaryMediaUrl);
+        }
+
+        const streamUrl = getStreamingCloudinaryUrl(primaryMediaUrl);
+        await proxyRemoteStream(streamUrl, req, res, { headOnly });
+    } catch (err) {
+        console.error('❌ Error en streaming:', err.message);
+        return res.status(500).json({ message: 'Error obteniendo streaming' });
+    }
+}
+
+app.get('/api/videos/:videoId/stream', (req, res) => handleVideoStream(req, res, false));
+app.head('/api/videos/:videoId/stream', (req, res) => handleVideoStream(req, res, true));
 
 app.get('/api/videos/:videoId/download', async (req, res) => {
     try {

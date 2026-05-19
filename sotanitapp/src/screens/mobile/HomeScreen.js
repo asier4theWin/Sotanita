@@ -6,7 +6,7 @@ import * as MediaLibrary from 'expo-media-library';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Audio, ResizeMode, Video, getStreamingVideoUrl } from '../../utils/media';
+import { Audio, ResizeMode, Video, getStreamingVideoSourceFromVideo } from '../../utils/media';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import { getAllVideos, getVideos, getCategories, likeVideo, unlikeVideo, getVideoComments, postVideoComment, uploadCommentAudio, deleteVideoComment, deleteVideo, getTeamById, postForumMessage } from '../../api/backend';
 import { useAuth } from '../../context/AuthContext';
@@ -165,7 +165,10 @@ const FeedVideoItem = ({
   const [videoNatural, setVideoNatural] = useState(null);
   const gifMaxSize = Math.round(screenWidth * 0.65);
   const videoUrl = useMemo(() => normalizeCloudinaryVideoUrl(video.url), [video.url]);
-  const streamingVideoUrl = useMemo(() => getStreamingVideoUrl(videoUrl), [videoUrl]);
+  const streamingVideoUrl = useMemo(
+    () => getStreamingVideoSourceFromVideo(video, 0, videoUrl),
+    [video, videoUrl]
+  );
   const mediaUrls = Array.isArray(video.mediaUrls) && video.mediaUrls.length
     ? video.mediaUrls
     : video.url
