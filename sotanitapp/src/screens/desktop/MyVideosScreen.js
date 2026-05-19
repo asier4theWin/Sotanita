@@ -27,7 +27,7 @@ import FifaCard from '../../components/FifaCard';
 import AppButton from '../../components/AppButton';
 import LoadingOverlay from '../../components/LoadingOverlay';
 import StrokeText from '../../components/StrokeText';
-import { deleteVideo, getAllVideos, getTeamById, getVideoComments, likeVideo, postForumMessage, unlikeVideo } from '../../api/backend';
+import { deleteVideo, deleteVideoComment, getAllVideos, getTeamById, getVideoComments, likeVideo, postForumMessage, postVideoComment, unlikeVideo, uploadCommentAudio } from '../../api/backend';
 import { formatLikes } from '../../utils/format';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:5000';
@@ -74,7 +74,7 @@ const normalizeMediaUrls = (video) => {
 };
 
 export default function MyVideosScreen({ navigation, route, embedded = false, onRequestClose, onVideoDeleted }) {
-  const { user } = useAuth();
+  const { user, isLoggedIn } = useAuth();
   const { colors, gradients, spacing, typography, textScale } = useAppTheme();
   const [videos, setVideos] = useState([]);
   const [loadingVideos, setLoadingVideos] = useState(true);
@@ -90,6 +90,10 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
   const isBlocking = loadingVideos || deletingVideo;
   const [commentText, setCommentText] = useState('');
   const [commentsByVideo, setCommentsByVideo] = useState({});
+  const [pendingDeleteComment, setPendingDeleteComment] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+  const [loadingNewComment, setLoadingNewComment] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [carouselWidth, setCarouselWidth] = useState(0);
   const [embeddedStageWidth, setEmbeddedStageWidth] = useState(0);
@@ -97,6 +101,10 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
   const [likingVideoId, setLikingVideoId] = useState(null);
   const carouselListRef = useRef(null);
   const audioRef = useRef(null);
+  const recordingRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const mediaChunksRef = useRef([]);
   const [activeAudioId, setActiveAudioId] = useState(null);
   const [audioPositionMs, setAudioPositionMs] = useState(0);
   const [audioDurationMs, setAudioDurationMs] = useState(0);
@@ -296,6 +304,7 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
     }).start(({ finished }) => {
       if (finished) {
         setShowComments(false);
+        setPendingDeleteComment(null);
       }
     });
   };
@@ -346,6 +355,10 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
         audioRef.current.unloadAsync().catch(() => {});
         audioRef.current = null;
       }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
     };
   }, []);
 
@@ -375,6 +388,216 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
       cancelled = true;
     };
   }, [activeVideo?.id, mapComment]);
+
+  const handleStopRecording = useCallback(async () => {
+    if (!activeVideo?.id) return;
+
+    if (Platform.OS === 'web') {
+      const recorder = mediaRecorderRef.current;
+      if (!recorder || recorder.state === 'inactive') return;
+      setIsUploadingAudio(true);
+      setLoadingNewComment(true);
+
+      const stopPromise = new Promise((resolve) => {
+        recorder.onstop = () => resolve();
+      });
+
+      recorder.stop();
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+      mediaRecorderRef.current = null;
+      setIsRecording(false);
+
+      await stopPromise;
+
+      try {
+        const blob = new Blob(mediaChunksRef.current, { type: 'audio/webm' });
+        const file = new File([blob], 'comment-audio.webm', { type: 'audio/webm' });
+        const formData = new FormData();
+        formData.append('file', file);
+        const uploadResult = await uploadCommentAudio(formData);
+        const payload = {
+          id_usuario: user?.email || 'usuario',
+          type: 'audio',
+          text: null,
+          audioUrl: uploadResult.url,
+        };
+        await postVideoComment(activeVideo.id, payload);
+
+        const updatedComments = await getVideoComments(activeVideo.id);
+        const mapped = updatedComments.map(mapComment);
+        setCommentsByVideo((prev) => ({
+          ...prev,
+          [activeVideo.id]: mapped,
+        }));
+        setVideos((prev) => prev.map((item) => (
+          item.id === activeVideo.id
+            ? { ...item, commentsCount: mapped.length || 0 }
+            : item
+        )));
+      } catch (error) {
+        Alert.alert('Error', error.message || 'No se pudo subir el audio.');
+      } finally {
+        setIsUploadingAudio(false);
+        setLoadingNewComment(false);
+      }
+
+      return;
+    }
+
+    try {
+      const recording = recordingRef.current;
+      if (!recording) return;
+      setIsRecording(false);
+      setIsUploadingAudio(true);
+      setLoadingNewComment(true);
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      recordingRef.current = null;
+
+      if (!uri) {
+        setIsUploadingAudio(false);
+        setLoadingNewComment(false);
+        Alert.alert('Error', 'No se pudo obtener el audio.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', {
+        uri,
+        type: 'audio/m4a',
+        name: 'comment-audio.m4a',
+      });
+
+      const uploadResult = await uploadCommentAudio(formData);
+      const payload = {
+        id_usuario: user?.email || 'usuario',
+        type: 'audio',
+        text: null,
+        audioUrl: uploadResult.url,
+      };
+
+      await postVideoComment(activeVideo.id, payload);
+
+      const updatedComments = await getVideoComments(activeVideo.id);
+      const mapped = updatedComments.map(mapComment);
+      setCommentsByVideo((prev) => ({
+        ...prev,
+        [activeVideo.id]: mapped,
+      }));
+      setVideos((prev) => prev.map((item) => (
+        item.id === activeVideo.id
+          ? { ...item, commentsCount: mapped.length || 0 }
+          : item
+      )));
+    } catch (error) {
+      Alert.alert('Error', error.message || 'No se pudo subir el audio.');
+    } finally {
+      setIsUploadingAudio(false);
+      setLoadingNewComment(false);
+    }
+  }, [activeVideo?.id, mapComment, user?.email]);
+
+  const handleSendComment = useCallback(async () => {
+    if (!activeVideo?.id) return;
+    if (!isLoggedIn || !user?.email) {
+      Alert.alert('Inicia sesion', 'Debes iniciar sesion para comentar.');
+      return;
+    }
+    if (isUploadingAudio) {
+      Alert.alert('Espera', 'Se esta subiendo el audio.');
+      return;
+    }
+
+    if (isRecording) {
+      await handleStopRecording();
+      return;
+    }
+
+    if (!commentText.trim()) {
+      Alert.alert('Vacio', 'Escribe un comentario o graba un audio.');
+      return;
+    }
+
+    setLoadingNewComment(true);
+    try {
+      const payload = {
+        id_usuario: user?.email || 'usuario',
+        type: 'text',
+        text: commentText.trim(),
+        audioUrl: null,
+      };
+
+      await postVideoComment(activeVideo.id, payload);
+
+      const updatedComments = await getVideoComments(activeVideo.id);
+      const mapped = updatedComments.map(mapComment);
+      setCommentsByVideo((prev) => ({
+        ...prev,
+        [activeVideo.id]: mapped,
+      }));
+      setVideos((prev) => prev.map((item) => (
+        item.id === activeVideo.id
+          ? { ...item, commentsCount: mapped.length || 0 }
+          : item
+      )));
+      setCommentText('');
+      setIsRecording(false);
+    } catch (error) {
+      Alert.alert('Error', error.message || 'No se pudo enviar el comentario.');
+    } finally {
+      setLoadingNewComment(false);
+    }
+  }, [activeVideo?.id, commentText, handleStopRecording, isLoggedIn, isRecording, isUploadingAudio, mapComment, user?.email]);
+
+  const handleToggleRecording = useCallback(async () => {
+    if (!activeVideo?.id) return;
+    if (!isLoggedIn || !user?.email) {
+      Alert.alert('Inicia sesion', 'Debes iniciar sesion para comentar.');
+      return;
+    }
+
+    if (isUploadingAudio || isRecording) return;
+
+    if (Platform.OS === 'web') {
+      if (!navigator?.mediaDevices?.getUserMedia || !globalThis.MediaRecorder) {
+        Alert.alert('No disponible', 'Tu navegador no soporta grabacion de audio.');
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaStreamRef.current = stream;
+        const recorder = new MediaRecorder(stream);
+        mediaChunksRef.current = [];
+        recorder.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) {
+            mediaChunksRef.current.push(event.data);
+          }
+        };
+        recorder.start();
+        mediaRecorderRef.current = recorder;
+        setCommentText('');
+        setIsRecording(true);
+      } catch (error) {
+        Alert.alert('Permisos requeridos', 'Necesitas permisos de microfono.');
+      }
+      return;
+    }
+
+    const permission = await Audio.requestPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permisos requeridos', 'Necesitas permisos de microfono.');
+      return;
+    }
+
+    await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+    const recording = new Audio.Recording();
+    await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+    await recording.startAsync();
+    recordingRef.current = recording;
+    setCommentText('');
+    setIsRecording(true);
+  }, [activeVideo?.id, isLoggedIn, isRecording, isUploadingAudio, user?.email]);
 
   const updateCarouselIndex = (offsetX) => {
     if (!carouselWidth) return;
@@ -660,6 +883,41 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
     }
   };
 
+  const handleDeleteComment = useCallback((comment) => {
+    if (!comment) return;
+    setPendingDeleteComment(comment);
+  }, []);
+
+  const confirmDeleteComment = useCallback(async () => {
+    if (!activeVideo?.id || !pendingDeleteComment || !user?.email) {
+      setPendingDeleteComment(null);
+      return;
+    }
+
+    const commentId = pendingDeleteComment.id || pendingDeleteComment._id;
+    if (!commentId) {
+      setPendingDeleteComment(null);
+      return;
+    }
+
+    try {
+      await deleteVideoComment(commentId, user.email);
+      setCommentsByVideo((prev) => ({
+        ...prev,
+        [activeVideo.id]: (prev[activeVideo.id] || []).filter((c) => (c.id || c._id) !== commentId),
+      }));
+      setVideos((prev) => prev.map((item) => (
+        item.id === activeVideo.id
+          ? { ...item, commentsCount: Math.max(0, (item.commentsCount || 0) - 1) }
+          : item
+      )));
+    } catch (error) {
+      Alert.alert('Error', error.message || 'No se pudo eliminar el comentario.');
+    } finally {
+      setPendingDeleteComment(null);
+    }
+  }, [activeVideo?.id, pendingDeleteComment, user?.email]);
+
   const activeComments = activeVideo?.id ? (commentsByVideo[activeVideo.id] || []) : [];
   const embeddedActions = (
     <View style={styles.embeddedActionColumn}>
@@ -834,6 +1092,29 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
             windowSize={3}
             removeClippedSubviews={false}
           />
+          {pendingDeleteComment ? (
+            <View style={[styles.deleteConfirmOverlay, { backgroundColor: colors.overlay }]}> 
+              <View style={[styles.deleteConfirmCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16, marginBottom: 8 }}>
+                  Desea borrar el comentario
+                </Text>
+                <View style={styles.deleteConfirmActions}>
+                  <Pressable
+                    style={[styles.deleteConfirmButton, { backgroundColor: colors.surfaceElevated }]}
+                    onPress={() => setPendingDeleteComment(null)}
+                  >
+                    <Text style={{ color: colors.text, fontWeight: '600' }}>Cancelar</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.deleteConfirmButton, { backgroundColor: colors.danger }]}
+                    onPress={confirmDeleteComment}
+                  >
+                    <Text style={{ color: colors.white, fontWeight: '700' }}>Borrar</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          ) : null}
           {mediaUrls.length > 1 ? (
             <>
               <Pressable
@@ -1003,9 +1284,27 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
                 disableShadow
               />
               <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.text, fontWeight: typography.weights.semibold }}>
-                  {item.author || item.authorUsername || 'Usuario'}
-                </Text>
+                      <View style={styles.commentHeaderRow} pointerEvents="box-none">
+                        <Text
+                          style={[styles.commentHeaderText, { color: colors.text, fontWeight: typography.weights.semibold }]}
+                          pointerEvents="none"
+                        >
+                          @{item.author || item.authorUsername || 'Usuario'}
+                          {(item.type || item?.type) === 'audio' ? '  -  Mensaje de Audio' : ''}
+                        </Text>
+                        {String(item.userId || '').trim().toLowerCase() === String(user?.email || '').trim().toLowerCase() ? (
+                          <Pressable
+                            onPress={() => handleDeleteComment(item)}
+                            onMouseDown={() => handleDeleteComment(item)}
+                            onTouchStart={() => handleDeleteComment(item)}
+                            style={[styles.commentDelete, { backgroundColor: colors.danger }]}
+                            hitSlop={12}
+                            pointerEvents="auto"
+                          >
+                            <Ionicons name="trash" size={14} color={colors.white} />
+                          </Pressable>
+                        ) : null}
+                      </View>
                 <Text style={{ color: colors.textMuted }}>
                   {(item.type || item?.type) === 'audio' ? 'Mensaje de Audio' : (item.content || 'Comentario sin texto')}
                 </Text>
@@ -1038,13 +1337,19 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
           placeholderTextColor={colors.textMuted}
           style={[styles.commentInput, { backgroundColor: colors.surfaceElevated, color: colors.text }]}
         />
-        <Pressable style={[styles.actionCircle, { backgroundColor: colors.primary }]} onPress={() => setCommentText('')}>
+        <Pressable style={[styles.actionCircle, { backgroundColor: colors.primary }]} onPress={handleSendComment} disabled={loadingNewComment}>
           <Ionicons name="send" size={18} color={colors.black} />
         </Pressable>
-        <Pressable style={[styles.actionCircle, { backgroundColor: colors.surfaceElevated }]} onPress={() => {}}>
+        <Pressable style={[styles.actionCircle, { backgroundColor: colors.surfaceElevated }]} onPress={handleToggleRecording} disabled={loadingNewComment}>
           <Ionicons name="mic" size={18} color={colors.text} />
         </Pressable>
       </View>
+      {isRecording || isUploadingAudio ? (
+        <View style={styles.recordingBar}>
+          <View style={styles.recordingDot} />
+          <Text style={{ color: colors.text }}>{isUploadingAudio ? 'Subiendo audio...' : 'Grabando audio...'}</Text>
+        </View>
+      ) : null}
     </View>
   );
 
@@ -1457,19 +1762,21 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
       </SafeAreaView>
 
       {showComments ? (
-        <View style={styles.commentsLayer}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={closeComments}>
-            <Animated.View style={[styles.commentsBackdrop, { backgroundColor: colors.overlay, opacity: commentsAnim }]} />
+        <View style={styles.commentsLayer} pointerEvents="box-none">
+          <Pressable style={[StyleSheet.absoluteFill, styles.commentsBackdropPressable]} onPress={closeComments}>
+            <Animated.View style={[styles.commentsBackdrop, { backgroundColor: colors.overlay, opacity: commentsAnim }]} pointerEvents="none" />
           </Pressable>
           <Animated.View
             style={[
               styles.bottomSheet,
+              styles.commentsPanel,
               {
                 backgroundColor: colors.surface,
                 transform: [{ translateX: commentsTranslateY }],
                 opacity: commentsAnim,
               },
             ]}
+            pointerEvents="auto"
           >
             <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}> 
               <Text style={{ color: colors.text, fontWeight: typography.weights.bold, fontFamily: typography.families.nougat, fontSize: typography.sizes.xl * textScale, textAlign: 'left', flex: 1 }}>
@@ -1480,27 +1787,77 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
               </Pressable>
             </View>
 
-            <FlatList
-              data={[1, 2, 3, 4, 5]}
-              keyExtractor={(item) => String(item)}
-              style={{ flex: 1 }}
-              contentContainerStyle={{ padding: spacing.md, gap: spacing.sm }}
-              renderItem={({ item }) => (
-                <View style={styles.commentRow}>
-                  <FifaCard
-                    username={`Usuario${item}`}
-                    team="Sin equipo"
-                    position="---"
-                    size="small"
-                    disableShadow
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: colors.text, fontWeight: typography.weights.semibold }}>Usuario{item}</Text>
-                    <Text style={{ color: colors.textMuted }}>Que golazo! Increible jugada.</Text>
+            {activeVideo?.id && commentsByVideo[activeVideo.id] === undefined ? (
+              <View style={styles.embeddedCommentsEmpty}>
+                <Text style={{ color: colors.textMuted }}>Cargando comentarios...</Text>
+              </View>
+            ) : activeComments.length === 0 ? (
+              <View style={styles.embeddedCommentsEmpty}>
+                <Text style={{ color: colors.textMuted }}>Este post aun no tiene comentarios.</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={activeComments}
+                keyExtractor={(item, index) => String(item.id || item._id || index)}
+                style={{ flex: 1 }}
+                contentContainerStyle={{ padding: spacing.md, gap: spacing.sm }}
+                renderItem={({ item }) => (
+                  <View style={styles.commentRow}>
+                    <FifaCard
+                      username={item.author || item.authorUsername || 'Usuario'}
+                      team={item.authorTeamName || 'Sin equipo'}
+                      position="---"
+                      photoUrl={item.authorProfileImageUrl}
+                      backgroundUrl={item.authorTeamImageUrl}
+                      frameUrl={item.authorFrameImageId}
+                      size="small"
+                      disableShadow
+                    />
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.commentHeaderRow} pointerEvents="box-none">
+                        <Text
+                          style={[styles.commentHeaderText, { color: colors.text, fontWeight: typography.weights.semibold }]}
+                          pointerEvents="none"
+                        >
+                          @{item.author || item.authorUsername || 'Usuario'}
+                          {(item.type || item?.type) === 'audio' ? '  -  Mensaje de Audio' : ''}
+                        </Text>
+                        {String(item.userId || '').trim().toLowerCase() === String(user?.email || '').trim().toLowerCase() ? (
+                          <Pressable
+                            onPress={() => handleDeleteComment(item)}
+                            onMouseDown={() => handleDeleteComment(item)}
+                            onTouchStart={() => handleDeleteComment(item)}
+                            style={[styles.commentDelete, { backgroundColor: colors.danger }]}
+                            hitSlop={12}
+                            pointerEvents="auto"
+                          >
+                            <Ionicons name="trash" size={14} color={colors.white} />
+                          </Pressable>
+                        ) : null}
+                      </View>
+                      <Text style={{ color: colors.textMuted }}>
+                        {(item.type || item?.type) === 'audio' ? 'Mensaje de Audio' : (item.content || 'Comentario sin texto')}
+                      </Text>
+                      {(item.type || item?.type) === 'audio' ? (
+                        <Pressable
+                          onPress={() => handleToggleAudio(item)}
+                          style={[styles.audioBubble, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
+                        >
+                          <Ionicons
+                            name={activeAudioId === item.id && isAudioPlaying ? 'pause' : 'play'}
+                            size={20}
+                            color={colors.text}
+                          />
+                          <Text style={{ color: colors.text, marginLeft: 10, fontWeight: '700' }}>
+                            {activeAudioId === item.id ? formatTime(audioPositionMs) : '0:00'}
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
                   </View>
-                </View>
-              )}
-            />
+                )}
+              />
+            )}
 
             <View style={[styles.commentInputRow, { borderTopColor: colors.border }]}> 
               <TextInput
@@ -1510,16 +1867,52 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
                 placeholderTextColor={colors.textMuted}
                 style={[styles.commentInput, { backgroundColor: colors.surfaceElevated, color: colors.text }]}
               />
-              <Pressable style={[styles.actionCircle, { backgroundColor: colors.primary }]} onPress={() => setCommentText('')}>
+              <Pressable style={[styles.actionCircle, { backgroundColor: colors.primary }]} onPress={handleSendComment} disabled={loadingNewComment}>
                 <Ionicons name="send" size={18} color={colors.black} />
               </Pressable>
-              <Pressable style={[styles.actionCircle, { backgroundColor: colors.surfaceElevated }]} onPress={() => {}}>
+              <Pressable style={[styles.actionCircle, { backgroundColor: colors.surfaceElevated }]} onPress={handleToggleRecording} disabled={loadingNewComment}>
                 <Ionicons name="mic" size={18} color={colors.text} />
               </Pressable>
             </View>
+            {isRecording || isUploadingAudio ? (
+              <View style={styles.recordingBar}>
+                <View style={styles.recordingDot} />
+                <Text style={{ color: colors.text }}>{isUploadingAudio ? 'Subiendo audio...' : 'Grabando audio...'}</Text>
+              </View>
+            ) : null}
           </Animated.View>
         </View>
       ) : null}
+
+      <Modal
+        visible={Boolean(pendingDeleteComment)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPendingDeleteComment(null)}
+      >
+        <View style={[styles.deleteConfirmOverlay, { backgroundColor: colors.overlay }]}> 
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setPendingDeleteComment(null)} />
+          <View style={[styles.deleteConfirmCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16, marginBottom: 8 }}>
+              Desea borrar el comentario
+            </Text>
+            <View style={styles.deleteConfirmActions}>
+              <Pressable
+                style={[styles.deleteConfirmButton, { backgroundColor: colors.surfaceElevated }]}
+                onPress={() => setPendingDeleteComment(null)}
+              >
+                <Text style={{ color: colors.text, fontWeight: '600' }}>Cancelar</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.deleteConfirmButton, { backgroundColor: colors.danger }]}
+                onPress={confirmDeleteComment}
+              >
+                <Text style={{ color: colors.white, fontWeight: '700' }}>Borrar</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={showShare} transparent animationType="fade" onRequestClose={closeShareModal}>
         <Pressable style={styles.shareOverlay} onPress={closeShareModal}>
@@ -1772,8 +2165,15 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     zIndex: 20,
   },
+  commentsBackdropPressable: {
+    zIndex: 1,
+  },
   commentsBackdrop: {
     ...StyleSheet.absoluteFillObject,
+  },
+  commentsPanel: {
+    position: 'relative',
+    zIndex: 2,
   },
   bottomSheet: {
     width: '92%',
@@ -1835,10 +2235,56 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
   },
+  commentHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  commentHeaderText: {
+    flex: 1,
+    marginRight: 8,
+    flexShrink: 1,
+  },
+  commentDelete: {
+    position: 'relative',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+    zIndex: 5,
+  },
   commentAvatar: {
     width: 38,
     height: 38,
     borderRadius: 19,
+  },
+  deleteConfirmOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    zIndex: 10,
+  },
+  deleteConfirmCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 16,
+  },
+  deleteConfirmActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  deleteConfirmButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
   },
   commentInputRow: {
     borderTopWidth: 1,
@@ -1846,6 +2292,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  recordingBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  recordingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ef4444',
   },
   audioBubble: {
     marginTop: 8,
@@ -1884,9 +2343,9 @@ const styles = StyleSheet.create({
     zIndex: 8,
   },
   carouselArrowLeft: {
-    left: 18,
+    left: 72,
   },
   carouselArrowRight: {
-    right: 18,
+    right: 72,
   },
 });

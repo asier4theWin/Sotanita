@@ -138,7 +138,8 @@ function DesktopNavBar({ navigation }) {
       }
 
       try {
-        const count = await getUnreadNotificationsCount(user.email);
+        const email = String(user.email).trim().toLowerCase();
+        const count = await getUnreadNotificationsCount(email);
         setUnreadCount(count);
       } catch (error) {
         console.error('Error cargando conteo de notificaciones:', error);
@@ -148,24 +149,57 @@ function DesktopNavBar({ navigation }) {
     loadUnreadCount();
   }, [isLoggedIn, user?.email]);
 
-  // Conectar a socket para actualizaciones en tiempo real
+  // Conectar a socket para actualizaciones en tiempo real (misma logica que en mobile)
   useEffect(() => {
-    if (!isLoggedIn || !user?.email) return;
+    if (!isLoggedIn || !user?.email) {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+      setUnreadCount(0);
+      return;
+    }
 
-    const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:5000';
-    socketRef.current = io(BACKEND_URL, { reconnection: true });
+    const apiBaseUrl = (process.env.EXPO_PUBLIC_API_URL || process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:5000')
+      .replace(/\/+$/, '')
+      .replace(/\/api$/, '');
 
-    socketRef.current.on('connect', () => {
-      socketRef.current.emit('subscribe', { userEmail: user.email });
-    });
+    if (!socketRef.current) {
+      socketRef.current = io(apiBaseUrl, {
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        reconnectionAttempts: 5,
+      });
 
-    socketRef.current.on('notificationCreated', () => {
-      setUnreadCount((prev) => prev + 1);
-    });
+      socketRef.current.on('connect', () => {
+        socketRef.current.emit('userConnect', String(user.email).trim().toLowerCase());
+      });
+
+      socketRef.current.on('newNotification', () => {
+        setUnreadCount((prev) => prev + 1);
+      });
+
+      socketRef.current.on('error', (error) => {
+        console.error('❌ Error en WebSocket:', error);
+      });
+    }
+
+    const loadInitialCount = async () => {
+      try {
+        const count = await getUnreadNotificationsCount(String(user.email).trim().toLowerCase());
+        setUnreadCount(count);
+      } catch (error) {
+        console.error('Error cargando conteo de notificaciones:', error);
+      }
+    };
+
+    loadInitialCount();
 
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
+        socketRef.current = null;
       }
     };
   }, [isLoggedIn, user?.email]);
@@ -407,7 +441,7 @@ function DesktopNavBar({ navigation }) {
                   <View
                     style={[
                       styles.badge,
-                      { backgroundColor: colors.danger },
+                      { backgroundColor: colors.primary },
                     ]}
                   >
                     <Text
@@ -512,7 +546,14 @@ function DesktopNavBar({ navigation }) {
                   renderItem={({ item }) => (
                     <NotificationItem
                       item={item}
-                      onOpenVideo={() => setShowNotifications(false)}
+                      onOpenVideo={(videoId) => {
+                        if (!videoId) return;
+                        setShowNotifications(false);
+                        navigation.navigate('MainTabs', {
+                          screen: 'Home',
+                          params: { videoId },
+                        });
+                      }}
                     />
                   )}
                   keyExtractor={(item) => String(item.id)}

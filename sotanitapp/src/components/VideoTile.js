@@ -94,7 +94,9 @@ export default function VideoTile({ item, onPress, variant = 'uploaded' }) {
             />
           )
         ) : null}
-        <Ionicons name={isImage ? (isCarousel ? 'images' : 'image') : 'play'} size={24} color={`${colors.textMuted}CC`} />
+        <View style={styles.iconOverlay}>
+          <Ionicons name={isImage ? (isCarousel ? 'images' : 'image') : 'play'} size={24} color={`${colors.textMuted}CC`} />
+        </View>
       </View>
 
       <View style={styles.likesRow}>
@@ -130,6 +132,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     objectFit: 'fill',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  iconOverlay: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   likesRow: {
     position: 'absolute',
