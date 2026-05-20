@@ -146,7 +146,8 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
 
   useEffect(() => {
     const loadVideos = async () => {
-      if (!user?.email) {
+      const hasViewer = Boolean(user?.email);
+      if (!hasViewer && sourceTab !== 'ranking') {
         setVideos([]);
         setLoadingVideos(false);
         return;
@@ -154,7 +155,7 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
 
       setLoadingVideos(true);
       try {
-        const currentUserId = String(user.email).trim().toLowerCase();
+        const currentUserId = hasViewer ? String(user.email).trim().toLowerCase() : '';
         const allVideos = await getAllVideos(20, 50);
         const normalized = allVideos.map((video) => {
           const uploader = String(video.id_usuario || '').trim().toLowerCase();
@@ -166,7 +167,7 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
             ...video,
             user: uploader ? uploader.split('@')[0] : 'usuario',
             uploader,
-            hasLiked: likedBy.includes(currentUserId),
+            hasLiked: hasViewer ? likedBy.includes(currentUserId) : false,
           };
         });
 
