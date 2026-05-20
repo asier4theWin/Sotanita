@@ -607,7 +607,12 @@ export default function ProfileScreen({ navigation, hideProfileCard = false }) {
               >
                 <View style={styles.squareActionIconWrap}>
                   {teamImageSource ? (
-                    <Image source={teamImageSource} style={styles.teamCrest} resizeMode="contain" />
+                    <Image
+                      source={teamImageSource}
+                      style={styles.teamCrest}
+                      resizeMode="contain"
+                      accessibilityLabel="Escudo del equipo"
+                    />
                   ) : (
                     <Ionicons name="shield-outline" size={40} color={colors.primary} />
                   )}
@@ -637,7 +642,12 @@ export default function ProfileScreen({ navigation, hideProfileCard = false }) {
                 ]}
               >
                 <View style={styles.squareActionIconWrap}>
-                  <Image source={teamChangeIcon} style={styles.teamChangeIcon} resizeMode="contain" />
+                  <Image
+                    source={teamChangeIcon}
+                    style={styles.teamChangeIcon}
+                    resizeMode="contain"
+                    accessibilityLabel="Icono cambiar equipo"
+                  />
                 </View>
                 <Text
                   style={{
@@ -790,7 +800,12 @@ export default function ProfileScreen({ navigation, hideProfileCard = false }) {
         <Pressable style={[styles.modalOverlay, { backgroundColor: colors.overlay }]} onPress={() => {}}>
           <View style={[styles.crestOverlayCard, { backgroundColor: 'transparent' }]}> 
             {teamEscudoUrl ? (
-              <Image source={{ uri: teamEscudoUrl }} style={styles.crestBig} resizeMode="contain" />
+              <Image
+                source={{ uri: teamEscudoUrl }}
+                style={styles.crestBig}
+                resizeMode="contain"
+                accessibilityLabel="Escudo del equipo"
+              />
             ) : (
               <Ionicons name="shield-outline" size={120} color={colors.primary} />
             )}
@@ -894,12 +909,13 @@ export default function ProfileScreen({ navigation, hideProfileCard = false }) {
                     {item.escudoUrl ? (
                       <Image
                         source={{ uri: item.escudoUrl }}
-                          style={{
-                            width: '70%',
-                            height: '50%',
-                            resizeMode: 'contain',
-                            marginBottom: 12,
-                          }}
+                        style={{
+                          width: '70%',
+                          height: '50%',
+                          resizeMode: 'contain',
+                          marginBottom: 12,
+                        }}
+                        accessibilityLabel={`Escudo de ${item.name}`}
                       />
                     ) : (
                       <View
@@ -963,7 +979,12 @@ export default function ProfileScreen({ navigation, hideProfileCard = false }) {
             </Text>
             <View style={[styles.teamModalCrestWrap, { borderColor: colors.border, backgroundColor: darkMode ? colors.surfaceElevated : `${colors.primary}10` }]}> 
               {teamImageSource ? (
-                <Image source={teamImageSource} style={styles.teamModalCrest} resizeMode="contain" />
+                <Image
+                  source={teamImageSource}
+                  style={styles.teamModalCrest}
+                  resizeMode="contain"
+                  accessibilityLabel="Escudo del equipo"
+                />
               ) : (
                 <Ionicons name="shield-outline" size={88} color={colors.primary} />
               )}

@@ -495,10 +495,20 @@ export default function ForoEquipo({ route, navigation }) {
                         isMuted
                       />
                     ) : (
-                      <Image source={{ uri: item.share.thumbnailUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                      <Image
+                        source={{ uri: item.share.thumbnailUrl }}
+                        style={{ width: '100%', height: '100%' }}
+                        resizeMode="cover"
+                        accessibilityLabel="Vista previa del contenido compartido"
+                      />
                     )
                   ) : (
-                    <Image source={require('../../../assets/perfil/teamChange_light.png')} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                    <Image
+                      source={require('../../../assets/perfil/teamChange_light.png')}
+                      style={{ width: '100%', height: '100%' }}
+                      resizeMode="cover"
+                      accessibilityLabel="Vista previa no disponible"
+                    />
                   )}
                   <View style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.14)' }}>
                     <Ionicons
@@ -551,7 +561,11 @@ export default function ForoEquipo({ route, navigation }) {
         {team ? (
           <View style={styles.headerInner}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', flex: 1, marginRight: 8 }}>
-              <Image source={team.escudoUrl ? { uri: team.escudoUrl } : require('../../../assets/perfil/teamChange_light.png')} style={styles.crest} />
+              <Image
+                source={team.escudoUrl ? { uri: team.escudoUrl } : require('../../../assets/perfil/teamChange_light.png')}
+                style={styles.crest}
+                accessibilityLabel="Escudo del equipo"
+              />
               <View style={{ marginLeft: 12, flex: 1 }}>
                 {/* Fila 1: Nombre del foro */}
                 <Text style={{ fontFamily: typography.families.nougat, fontSize: 18 * textScale, color: colors.text, fontWeight: '700' }}>

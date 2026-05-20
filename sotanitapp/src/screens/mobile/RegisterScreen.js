@@ -323,6 +323,7 @@ export default function RegisterScreen({ navigation }) {
         <Pressable
           onPress={handleSelectPhoto}
           disabled={photoLoading}
+          accessibilityLabel="Seleccionar foto de perfil"
           style={[
             styles.photoPicker,
             {
@@ -339,7 +340,12 @@ export default function RegisterScreen({ navigation }) {
               </Text>
             </View>
           ) : photoUri ? (
-            <Image source={{ uri: photoUri }} style={styles.photoPreview} resizeMode="cover" />
+            <Image
+              source={{ uri: photoUri }}
+              style={styles.photoPreview}
+              resizeMode="cover"
+              accessibilityLabel="Vista previa de foto de perfil"
+            />
           ) : (
             <View style={styles.photoPlaceholder}>
               <Text style={{ color: colors.textMuted, fontWeight: typography.weights.semibold }}>Toca para subir tu foto</Text>

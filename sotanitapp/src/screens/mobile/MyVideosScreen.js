@@ -373,6 +373,7 @@ export default function MyVideosScreen({ navigation, route }) {
                       source={{ uri: item }}
                       resizeMode="stretch"
                       style={StyleSheet.absoluteFillObject}
+                      accessibilityLabel="Imagen del carrusel"
                     />
                   </View>
                 )}
@@ -453,6 +454,7 @@ export default function MyVideosScreen({ navigation, route }) {
                 source={{ uri: activeVideo.url }}
                 style={StyleSheet.absoluteFillObject}
                 resizeMode="stretch"
+                accessibilityLabel="Vista previa de imagen"
               />
               <LinearGradient colors={['transparent', 'rgba(0,0,0,0.65)']} style={StyleSheet.absoluteFillObject} />
               <View style={styles.infoWrapper}>

@@ -131,6 +131,7 @@ const MediaCarousel = ({ urls, height, activeIndex, onIndexChange }) => {
             source={{ uri: url }}
             resizeMode="cover"
             style={{ width: width || '100%', height }}
+            accessibilityLabel="Imagen del carrusel"
           />
         ))}
       </ScrollView>
@@ -309,6 +310,7 @@ const FeedVideoItem = ({
               source={{ uri: posterUrl }}
               style={[StyleSheet.absoluteFillObject, styles.videoPoster]}
               resizeMode="cover"
+              accessibilityLabel="Vista previa de video"
             />
           ) : (
             <View style={[styles.videoPoster, styles.videoPosterFallback]}>
@@ -337,6 +339,7 @@ const FeedVideoItem = ({
             source={{ uri: posterUrl }}
             style={[StyleSheet.absoluteFillObject, styles.videoPoster]}
             resizeMode="cover"
+            accessibilityLabel="Vista previa de video"
           />
         ) : (
           <View style={[styles.videoPoster, styles.videoPosterFallback]}>
@@ -356,6 +359,7 @@ const FeedVideoItem = ({
           source={{ uri: video.url }}
           style={StyleSheet.absoluteFillObject}
           resizeMode="cover"
+          accessibilityLabel="Vista previa de imagen"
         />
       )}
       <Animated.View
@@ -376,7 +380,12 @@ const FeedVideoItem = ({
         ]}
       >
         <View style={[styles.tapFeedbackBubble, { width: gifMaxSize, height: gifMaxSize, borderRadius: gifMaxSize / 2 }]}>
-          <Image source={tapFeedbackSource} style={[styles.tapFeedbackGif, { width: gifMaxSize * 0.89, height: gifMaxSize * 0.89 }]} resizeMode="contain" />
+          <Image
+            source={tapFeedbackSource}
+            style={[styles.tapFeedbackGif, { width: gifMaxSize * 0.89, height: gifMaxSize * 0.89 }]}
+            resizeMode="contain"
+            accessibilityLabel="Me gusta"
+          />
         </View>
       </Animated.View>
       <LinearGradient
@@ -1936,7 +1945,12 @@ export default function HomeScreen({ navigation, route }) {
 
               <Pressable onPress={handleShareToFanZone} style={[styles.shareRectButton, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}> 
                 <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                  <Image source={fanZoneShieldUri ? { uri: fanZoneShieldUri } : require('../../../assets/perfil/teamChange_light.png')} style={{ width: 56, height: 56, borderRadius: 12 }} resizeMode="contain" />
+                  <Image
+                    source={fanZoneShieldUri ? { uri: fanZoneShieldUri } : require('../../../assets/perfil/teamChange_light.png')}
+                    style={{ width: 56, height: 56, borderRadius: 12 }}
+                    resizeMode="contain"
+                    accessibilityLabel="Escudo del equipo"
+                  />
                   <Text style={{ color: colors.text, fontWeight: '700', textAlign: 'center' }}>Compartir en Fan Zone</Text>
                 </View>
               </Pressable>

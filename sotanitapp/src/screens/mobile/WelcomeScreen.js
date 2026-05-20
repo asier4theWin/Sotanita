@@ -25,7 +25,12 @@ export default function WelcomeScreen({ navigation }) {
 
       <View style={[styles.container, { padding: spacing.xl }]}> 
         <View style={styles.logoBlock}>
-          <Image source={appLogo} style={styles.logoImage} resizeMode="contain" />
+          <Image
+            source={appLogo}
+            style={styles.logoImage}
+            resizeMode="contain"
+            accessibilityLabel="Logo Sotanita"
+          />
           <Text style={{ color: colors.primary, fontSize: typography.sizes.lg * textScale }}>
             Cuando las jugadas están bien... pa no verlas.
           </Text>
@@ -33,17 +38,32 @@ export default function WelcomeScreen({ navigation }) {
 
         <View style={styles.actions}>
           <View style={styles.authImageButtonsRow}>
-            <Pressable onPress={() => navigation.navigate('Login')} style={styles.authImageButton}>
-              <Image source={loginButtonImage} style={styles.authImageButtonAsset} resizeMode="contain" />
+            <Pressable onPress={() => navigation.navigate('Login')} style={styles.authImageButton} accessibilityLabel="Iniciar sesion">
+              <Image
+                source={loginButtonImage}
+                style={styles.authImageButtonAsset}
+                resizeMode="contain"
+                accessibilityLabel="Boton iniciar sesion"
+              />
             </Pressable>
 
-            <Pressable onPress={() => navigation.navigate('Register')} style={styles.authImageButton}>
-              <Image source={registerButtonImage} style={styles.authImageButtonAsset} resizeMode="contain" />
+            <Pressable onPress={() => navigation.navigate('Register')} style={styles.authImageButton} accessibilityLabel="Registrarse">
+              <Image
+                source={registerButtonImage}
+                style={styles.authImageButtonAsset}
+                resizeMode="contain"
+                accessibilityLabel="Boton registrarse"
+              />
             </Pressable>
           </View>
 
-          <Pressable onPress={handleGuest} style={styles.guestButton}>
-            <Image source={guestButtonImage} style={styles.guestButtonImage} resizeMode="contain" />
+          <Pressable onPress={handleGuest} style={styles.guestButton} accessibilityLabel="Entrar como invitado">
+            <Image
+              source={guestButtonImage}
+              style={styles.guestButtonImage}
+              resizeMode="contain"
+              accessibilityLabel="Boton entrar como invitado"
+            />
           </Pressable>
         </View>
       </View>
