@@ -3,7 +3,6 @@ const CORE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/favicon.ico',
   '/favicon.png',
   '/apple-touch-icon.png',
   '/icons/icon-192.png',
