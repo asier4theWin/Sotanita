@@ -559,7 +559,7 @@ export default function MyVideosScreen({ navigation, route }) {
                   <FifaCard
                     username={`Usuario${item}`}
                     team="Sin equipo"
-                    position="---"
+                    position={item?.authorPosition || item?.position || '---'}
                     size="small"
                     disableShadow
                   />

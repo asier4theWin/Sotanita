@@ -138,6 +138,7 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
     authorTeamName: comment.authorTeamName,
     authorTeamImageUrl: comment.authorTeamImageUrl,
     authorFrameImageId: comment.authorFrameImageId,
+    authorPosition: comment.authorPosition || comment.position || comment.posicion || comment.userPosition || comment.playerPosition,
     type: comment.type,
     content: comment.type === 'audio' ? null : comment.text,
     audioUrl: comment.audioUrl,
@@ -1259,7 +1260,7 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
               <FifaCard
                 username={item.author || item.authorUsername || 'Usuario'}
                 team={item.authorTeamName || 'Sin equipo'}
-                position="---"
+                position={item.authorPosition || '---'}
                 photoUrl={item.authorProfileImageUrl}
                 backgroundUrl={item.authorTeamImageUrl}
                 frameUrl={item.authorFrameImageId}
@@ -1825,7 +1826,7 @@ export default function MyVideosScreen({ navigation, route, embedded = false, on
                     <FifaCard
                       username={item.author || item.authorUsername || 'Usuario'}
                       team={item.authorTeamName || 'Sin equipo'}
-                      position="---"
+                      position={item.authorPosition || '---'}
                       photoUrl={item.authorProfileImageUrl}
                       backgroundUrl={item.authorTeamImageUrl}
                       frameUrl={item.authorFrameImageId}

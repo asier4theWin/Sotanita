@@ -814,6 +814,7 @@ export default function HomeScreen({ navigation, route }) {
     authorTeamName: comment.authorTeamName,
     authorTeamImageUrl: comment.authorTeamImageUrl,
     authorFrameImageId: comment.authorFrameImageId,
+    authorPosition: comment.authorPosition || comment.position || comment.posicion || comment.userPosition || comment.playerPosition,
     type: comment.type,
     content: comment.type === 'audio' ? null : comment.text,
     audioUrl: comment.audioUrl,
@@ -1751,7 +1752,7 @@ export default function HomeScreen({ navigation, route }) {
                     <FifaCard
                       username={comment.authorUsername || comment.author}
                       team={comment.authorTeamName || 'Sin equipo'}
-                      position="---"
+                      position={comment.authorPosition || '---'}
                       backgroundUrl={comment.authorTeamImageUrl}
                       frameUrl={comment.authorFrameImageId}
                       photoUrl={comment.authorProfileImageUrl}

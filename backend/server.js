@@ -923,6 +923,7 @@ app.get('/api/videos/:id/comments', async (req, res) => {
                 ...comment,
                 authorUsername: authorProfile?.username || comment.username || authorEmail.split('@')[0] || 'usuario',
                 authorProfileImageUrl: authorProfile?.profileImageUrl || null,
+                authorPosition: authorProfile?.position || comment.position || comment.posicion || null,
                 authorTeamName: cardData.teamName,
                 authorTeamImageUrl: cardData.teamImageUrl,
                 authorFrameImageId: cardData.frameImageId,
