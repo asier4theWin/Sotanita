@@ -158,6 +158,7 @@ const FeedVideoItem = ({
 }) => {
   const { colors, typography, textScale, spacing } = useAppTheme();
   const videoRef = useRef(null);
+  const wasActiveRef = useRef(false);
   const lastTapRef = useRef(0);
   const tapFeedbackAnim = useRef(new Animated.Value(0)).current;
   const tapFeedbackSource = require('../../../assets/like.gif');
@@ -232,11 +233,23 @@ const FeedVideoItem = ({
     return { width: displayWidth, height: displayHeight };
   }, [height, screenWidth, videoNatural]);
 
+  const resetPlayback = useCallback(async () => {
+    if (!videoRef.current) return;
+
+    try {
+      await videoRef.current.pauseAsync();
+      await videoRef.current.setPositionAsync(0);
+      await videoRef.current.unloadAsync();
+    } catch (error) {
+      console.log('Playback reset error:', error);
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
     const syncPlayback = async () => {
-      if (!videoRef.current || cancelled) return;
+      if (!videoRef.current || cancelled || !isVideo) return;
 
       try {
         if (isActive && !isAudioPlaying && !isRecording) {
@@ -257,6 +270,17 @@ const FeedVideoItem = ({
     };
   }, [isActive, isVideo, isAudioPlaying, isRecording]);
 
+  useEffect(() => {
+    if (wasActiveRef.current && !isActive) {
+      resetPlayback();
+    }
+    wasActiveRef.current = isActive;
+  }, [isActive, resetPlayback]);
+
+  useEffect(() => () => {
+    resetPlayback();
+  }, [resetPlayback]);
+
   const handleMediaTap = () => {
     const now = Date.now();
     if (now - lastTapRef.current < 250) {
@@ -270,15 +294,28 @@ const FeedVideoItem = ({
     <Pressable style={[styles.videoContainer, { height }]} onPress={handleMediaTap}> 
       {isVideo ? (
         Platform.OS === 'web' ? (
-          <video
-            src={streamingVideoUrl}
-            muted={!isActive || isAudioPlaying || isRecording}
-            loop
-            playsInline
-            preload="metadata"
-            autoPlay={isActive && !isAudioPlaying && !isRecording}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
+          isActive ? (
+            <video
+              src={streamingVideoUrl}
+              muted={!isActive || isAudioPlaying || isRecording}
+              loop
+              playsInline
+              preload="metadata"
+              autoPlay={isActive && !isAudioPlaying && !isRecording}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          ) : posterUrl ? (
+            <Image
+              source={{ uri: posterUrl }}
+              style={[StyleSheet.absoluteFillObject, styles.videoPoster]}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={[styles.videoPoster, styles.videoPosterFallback]}>
+              <Ionicons name="play-circle-outline" size={60} color={`${colors.white}CC`} />
+              <Text style={[styles.posterHint, { color: `${colors.white}CC`, fontSize: typography.sizes.sm * textScale }]}>Desliza para reproducir</Text>
+            </View>
+          )
         ) : isActive ? (
           <Video
             ref={videoRef}
