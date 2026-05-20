@@ -621,7 +621,7 @@ export default function ProfileScreen({ navigation, hideProfileCard = false }) {
                   }}
                   numberOfLines={2}
                 >
-                  ACCEDE A LA FAN ZONE
+                  FAN ZONE
                 </Text>
               </Pressable>
 
