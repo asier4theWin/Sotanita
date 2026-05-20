@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import StrokeText from '../../components/StrokeText';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -9,6 +9,7 @@ import ScreenGradient from '../../components/ScreenGradient';
 import FifaCard from '../../components/FifaCard';
 import { formatLikes } from '../../utils/format';
 import { getCategories, getWeeklyRankings } from '../../api/backend';
+import Pressable from '../../components/A11yPressable';
 
 export default function RankingScreen({ navigation }) {
   const { colors, spacing, typography, textScale, darkMode, highContrast } = useAppTheme();
@@ -223,7 +224,11 @@ export default function RankingScreen({ navigation }) {
       <ScrollView ref={scrollRef} contentContainerStyle={{ paddingBottom: 40 }}>
         <View style={[styles.header, { borderBottomColor: colors.border, padding: spacing.md }]}> 
           <View style={[styles.categorySelectWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
-            <Pressable style={styles.categorySelectButton} onPress={() => setShowPicker(true)}>
+            <Pressable
+              style={styles.categorySelectButton}
+              onPress={() => setShowPicker(true)}
+              accessibilityLabel="Seleccionar categoria"
+            >
               <Text
                 style={{
                   color: categoryTextColor,
@@ -252,7 +257,11 @@ export default function RankingScreen({ navigation }) {
       </ScrollView>
 
       <Modal visible={showPicker} transparent animationType="fade" onRequestClose={() => setShowPicker(false)}>
-        <Pressable style={[styles.modalOverlay, { backgroundColor: colors.overlay }]} onPress={() => setShowPicker(false)}>
+        <Pressable
+          style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}
+          onPress={() => setShowPicker(false)}
+          accessibilityLabel="Cerrar selector de categoria"
+        >
           <View style={[styles.menu, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
             {categories.map((item) => (
               <Pressable
@@ -262,6 +271,7 @@ export default function RankingScreen({ navigation }) {
                   setShowPicker(false);
                 }}
                 style={[styles.menuItem, item === category && { backgroundColor: `${colors.primary}22` }]}
+                accessibilityLabel={`Categoria ${item}`}
               >
                 <Text style={{ color: categoryTextColor, fontFamily: typography.families.nougat, fontSize: categoryItemFontSize, textAlign: 'center' }}>{item}</Text>
               </Pressable>

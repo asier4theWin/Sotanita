@@ -1,9 +1,10 @@
-import { Image, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions, Animated, Easing } from 'react-native';
+import { Image, Modal, StyleSheet, Text, View, useWindowDimensions, Animated, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import { useFirstVisit } from '../../hooks/useFirstVisit';
 import { useRef, useState, useEffect } from 'react';
+import Pressable from '../../components/A11yPressable';
 
 const loginButtonImage = require('../../../assets/init/login.png');
 const registerButtonImage = require('../../../assets/init/register.png');
@@ -59,7 +60,11 @@ export default function WelcomeScreen({ navigation }) {
           <View style={[styles.modalCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}> 
             <Text style={[styles.modalTitle, { color: colors.text, fontFamily: typography.families.nougat }]}>Bienvenido a Sotanita</Text>
             <Text style={[styles.modalMessage, { color: colors.textMuted }]}>Esta es la primera vez que entras desde este dispositivo o navegador. La próxima vez no volverá a mostrarse este mensaje.</Text>
-            <Pressable onPress={markFirstVisitSeen} style={[styles.modalButton, { backgroundColor: colors.primary }]}> 
+            <Pressable
+              onPress={markFirstVisitSeen}
+              style={[styles.modalButton, { backgroundColor: colors.primary }]}
+              accessibilityLabel="Continuar"
+            > 
               <Text style={[styles.modalButtonText, { color: colors.background }]}>Continuar</Text>
             </Pressable>
           </View>
@@ -96,8 +101,14 @@ export default function WelcomeScreen({ navigation }) {
               onMouseEnter={() => setHoverButton('login')}
               onMouseLeave={() => setHoverButton(null)}
               style={styles.imageButton}
+              accessibilityLabel="Iniciar sesion"
             >
-              <Image source={loginButtonImage} style={styles.imageButtonAsset} resizeMode="contain" />
+              <Image
+                source={loginButtonImage}
+                style={styles.imageButtonAsset}
+                resizeMode="contain"
+                accessibilityLabel="Boton iniciar sesion"
+              />
             </Pressable>
           </Animated.View>
 
@@ -112,8 +123,14 @@ export default function WelcomeScreen({ navigation }) {
               onMouseEnter={() => setHoverButton('register')}
               onMouseLeave={() => setHoverButton(null)}
               style={styles.imageButton}
+              accessibilityLabel="Registrarse"
             >
-              <Image source={registerButtonImage} style={styles.imageButtonAsset} resizeMode="contain" />
+              <Image
+                source={registerButtonImage}
+                style={styles.imageButtonAsset}
+                resizeMode="contain"
+                accessibilityLabel="Boton registrarse"
+              />
             </Pressable>
           </Animated.View>
 
@@ -128,8 +145,14 @@ export default function WelcomeScreen({ navigation }) {
               onMouseEnter={() => setHoverButton('guest')}
               onMouseLeave={() => setHoverButton(null)}
               style={styles.imageButton}
+              accessibilityLabel="Entrar como invitado"
             >
-              <Image source={guestButtonImage} style={styles.imageButtonAsset} resizeMode="contain" />
+              <Image
+                source={guestButtonImage}
+                style={styles.imageButtonAsset}
+                resizeMode="contain"
+                accessibilityLabel="Boton entrar como invitado"
+              />
             </Pressable>
           </Animated.View>
         </View>

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFirstVisit } from '../hooks/useFirstVisit';
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Image, Modal, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Asset } from 'expo-asset';
+import Pressable from './A11yPressable';
 
 const tutorialPages = [
   {
@@ -104,7 +105,7 @@ export default function PresentationPopup({ visible = true, onClose }) {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ width: popupWidth * tutorialPagesWithRatio.length }}
             >
-              {tutorialPagesWithRatio.map((page) => (
+                {tutorialPagesWithRatio.map((page, index) => (
                 <View key={page.key} style={[styles.page, { width: popupWidth }]}> 
                     <Image
                         source={page.image}
@@ -113,6 +114,7 @@ export default function PresentationPopup({ visible = true, onClose }) {
                             height: '100%',
                         }}
                         resizeMode="contain"
+                    accessibilityLabel={`Tutorial paso ${index + 1}`}
                     />
                 </View>
               ))}
@@ -121,10 +123,18 @@ export default function PresentationPopup({ visible = true, onClose }) {
 
           <View style={styles.footerWrap}>
             <View style={styles.footer}>
-              <Pressable onPress={buttonConfig.onBack} style={[styles.footerButton, styles.footerButtonSecondary]}>
+              <Pressable
+                onPress={buttonConfig.onBack}
+                style={[styles.footerButton, styles.footerButtonSecondary]}
+                accessibilityLabel={buttonConfig.backLabel}
+              >
                 <Text style={styles.footerButtonText}>{buttonConfig.backLabel}</Text>
               </Pressable>
-              <Pressable onPress={buttonConfig.onNext} style={[styles.footerButton, styles.footerButtonPrimary]}>
+              <Pressable
+                onPress={buttonConfig.onNext}
+                style={[styles.footerButton, styles.footerButtonPrimary]}
+                accessibilityLabel={buttonConfig.nextLabel}
+              >
                 <Text style={[styles.footerButtonText, styles.footerButtonPrimaryText]}>{buttonConfig.nextLabel}</Text>
               </Pressable>
             </View>

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../hooks/useAppTheme';
+import Pressable from './A11yPressable';
 
 export default function AppInput({
   label,
@@ -103,7 +104,11 @@ export default function AppInput({
         />
 
         {rightIcon ? (
-          <Pressable onPress={onRightPress} style={styles.iconButton}>
+          <Pressable
+            onPress={onRightPress}
+            style={styles.iconButton}
+            accessibilityLabel={label ? `Accion de ${label}` : 'Accion del campo'}
+          >
             <Ionicons name={rightIcon} size={20} color={colors.textMuted} />
           </Pressable>
         ) : null}

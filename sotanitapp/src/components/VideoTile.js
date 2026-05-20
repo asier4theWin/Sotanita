@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ResizeMode, Video, getStreamingVideoSourceFromVideo } from '../utils/media';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { useAppTheme } from '../hooks/useAppTheme';
 import { formatLikes } from '../utils/format';
+import Pressable from './A11yPressable';
 
 export default function VideoTile({ item, onPress, variant = 'uploaded' }) {
   const { colors, typography, textScale } = useAppTheme();
@@ -23,6 +24,11 @@ export default function VideoTile({ item, onPress, variant = 'uploaded' }) {
     ? getStreamingVideoSourceFromVideo(item, 0, primaryMediaUrl)
     : primaryMediaUrl;
   const [videoThumbnail, setVideoThumbnail] = useState(null);
+  const mediaLabel = item?.title
+    ? `Vista previa de ${item.title}`
+    : isImage
+      ? 'Vista previa de imagen'
+      : 'Vista previa de video';
 
   useEffect(() => {
     let isMounted = true;
@@ -53,13 +59,27 @@ export default function VideoTile({ item, onPress, variant = 'uploaded' }) {
   }, [isVideo, mediaUrls]);
 
   return (
-    <Pressable onPress={onPress} style={[styles.tile, { backgroundColor: colors.surface }]}> 
+    <Pressable
+      onPress={onPress}
+      style={[styles.tile, { backgroundColor: colors.surface }]}
+      accessibilityLabel={item?.title || 'Abrir video'}
+    > 
       <View style={styles.preview}>
         {isImage ? (
-          <Image source={{ uri: primaryMediaUrl }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+          <Image
+            source={{ uri: primaryMediaUrl }}
+            style={StyleSheet.absoluteFillObject}
+            resizeMode="cover"
+            accessibilityLabel={mediaLabel}
+          />
         ) : isVideo ? (
           videoThumbnail ? (
-            <Image source={{ uri: videoThumbnail }} style={StyleSheet.absoluteFillObject} resizeMode="stretch" />
+            <Image
+              source={{ uri: videoThumbnail }}
+              style={StyleSheet.absoluteFillObject}
+              resizeMode="stretch"
+              accessibilityLabel={mediaLabel}
+            />
           ) : Platform.OS === 'web' ? (
             <video
               src={streamingUrl}
@@ -85,6 +105,7 @@ export default function VideoTile({ item, onPress, variant = 'uploaded' }) {
               shouldPlay={false}
               isLooping={false}
               isMuted
+              accessibilityLabel={mediaLabel}
               onLoad={async () => {
                 try {
                   if (videoRef.current) {

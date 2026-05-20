@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Animated, Image, Modal, Platform, RefreshControl, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode, getStreamingVideoSourceFromVideo } from '../../utils/media';
 import { useFocusEffect } from '@react-navigation/native';
@@ -9,6 +9,7 @@ import ScreenGradient from '../../components/ScreenGradient';
 import LoadingOverlay from '../../components/LoadingOverlay';
 import MyVideosScreen from './MyVideosScreen';
 import FifaCard from '../../components/FifaCard';
+import Pressable from '../../components/A11yPressable';
 
 const qrCodeImage = require('../../../assets/qrcode.png');
 const copyrightLightImage = require('../../../assets/copyright/light.png');
@@ -43,6 +44,11 @@ function VideoPreviewCard({ video, colors, typography, textScale, onPress }) {
   const previewUrl = imagePreview
     ? rawPreviewUrl
     : getStreamingVideoSourceFromVideo(video, 0, rawPreviewUrl);
+  const previewLabel = video?.title
+    ? `Vista previa de ${video.title}`
+    : imagePreview
+      ? 'Vista previa de imagen'
+      : 'Vista previa de video';
   const [hovered, setHovered] = useState(false);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -60,6 +66,7 @@ function VideoPreviewCard({ video, colors, typography, textScale, onPress }) {
       onPress={onPress}
       onHoverIn={() => setHovered(true)}
       onHoverOut={() => setHovered(false)}
+      accessibilityLabel={video?.title || 'Abrir video'}
       style={({ pressed }) => [
         styles.videoCardPressable,
         Platform.OS === 'web' ? styles.webPointer : null,
@@ -69,7 +76,12 @@ function VideoPreviewCard({ video, colors, typography, textScale, onPress }) {
       <Animated.View style={[styles.videoCard, { backgroundColor: colors.surface, borderColor: colors.border, transform: [{ scale: scaleAnim }] }]}> 
         <View style={styles.mediaFrame}>
         {imagePreview ? (
-          <Image source={{ uri: previewUrl }} style={styles.media} resizeMode="cover" />
+          <Image
+            source={{ uri: previewUrl }}
+            style={styles.media}
+            resizeMode="cover"
+            accessibilityLabel={previewLabel}
+          />
         ) : Platform.OS === 'web' ? (
           <video
             src={previewUrl}
@@ -380,8 +392,18 @@ export default function HomeScreen({ navigation, route }) {
             </Pressable>
 
             <View style={styles.qrBlock}>
-              <Image source={qrCodeImage} style={styles.qrImage} resizeMode="contain" />
-              <Image source={copyrightSource} style={styles.copyrightImage} resizeMode="contain" />
+              <Image
+                source={qrCodeImage}
+                style={styles.qrImage}
+                resizeMode="contain"
+                accessibilityLabel="Codigo QR de descarga"
+              />
+              <Image
+                source={copyrightSource}
+                style={styles.copyrightImage}
+                resizeMode="contain"
+                accessibilityLabel="Logo de derechos de autor"
+              />
             </View>
           </View>
         </View>

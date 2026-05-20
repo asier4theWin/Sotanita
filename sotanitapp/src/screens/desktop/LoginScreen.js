@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import { useAppTheme } from '../../hooks/useAppTheme';
@@ -9,6 +9,7 @@ import AppButton from '../../components/AppButton';
 import AppInput from '../../components/AppInput';
 import Header from '../../components/Header';
 import LoadingOverlay from '../../components/LoadingOverlay';
+import Pressable from '../../components/A11yPressable';
 
 const isValidEmailOrUsername = (value) => {
   if (value.includes('@')) {
@@ -118,7 +119,7 @@ export default function LoginScreen({ navigation }) {
 
             <View style={styles.footer}>
               <Text style={{ color: colors.textMuted, fontSize: typography.sizes.sm * textScale }}>No tienes cuenta?</Text>
-              <Pressable onPress={() => navigation.navigate('Register')}>
+              <Pressable onPress={() => navigation.navigate('Register')} accessibilityLabel="Ir a registro">
                 <Text style={{ color: colors.primary, fontWeight: typography.weights.semibold, fontSize: typography.sizes.sm * textScale }}>
                   Registrate
                 </Text>

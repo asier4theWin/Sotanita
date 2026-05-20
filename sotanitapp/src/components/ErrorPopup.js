@@ -1,6 +1,7 @@
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAppTheme } from '../hooks/useAppTheme';
+import Pressable from './A11yPressable';
 
 export default function ErrorPopup({ visible = false, title, message, onClose }) {
   const { typography, textScale } = useAppTheme();
@@ -37,7 +38,7 @@ export default function ErrorPopup({ visible = false, title, message, onClose })
             {message}
           </Text>
 
-          <Pressable onPress={handleClose} style={styles.primaryButton}>
+          <Pressable onPress={handleClose} style={styles.primaryButton} accessibilityLabel="Cerrar mensaje">
             <Text style={styles.primaryButtonText}>ENTENDIDO</Text>
           </Pressable>
         </LinearGradient>

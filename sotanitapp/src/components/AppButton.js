@@ -1,6 +1,7 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { useAppTheme } from '../hooks/useAppTheme';
 import StrokeText from './StrokeText';
+import Pressable from './A11yPressable';
 
 export default function AppButton({
   title,
@@ -50,6 +51,7 @@ export default function AppButton({
       ]}
       onPress={onPress}
       disabled={disabled || loading}
+      accessibilityLabel={title}
     >
       {loading ? (
         <ActivityIndicator color={variant === 'primary' ? colors.black : colors.text} />

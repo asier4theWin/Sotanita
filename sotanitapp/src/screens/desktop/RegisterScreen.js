@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View, FlatList, Dimensions, useWindowDimensions } from 'react-native';
+import { Alert, Image, Modal, Platform, ScrollView, StyleSheet, Text, View, FlatList, Dimensions, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +12,7 @@ import AppButton from '../../components/AppButton';
 import AppInput from '../../components/AppInput';
 import Header from '../../components/Header';
 import LoadingOverlay from '../../components/LoadingOverlay';
+import Pressable from '../../components/A11yPressable';
 
 const REMOVE_BG_API_KEY = process.env.EXPO_PUBLIC_REMOVE_BG_API_KEY;
 
@@ -329,6 +330,7 @@ export default function RegisterScreen({ navigation }) {
         <Pressable
           onPress={handleSelectPhoto}
           disabled={photoLoading}
+          accessibilityLabel="Seleccionar foto de perfil"
           style={[
             styles.photoPicker,
             {
@@ -345,7 +347,12 @@ export default function RegisterScreen({ navigation }) {
               </Text>
             </View>
           ) : photoUri ? (
-            <Image source={{ uri: photoUri }} style={styles.photoPreview} resizeMode="cover" />
+            <Image
+              source={{ uri: photoUri }}
+              style={styles.photoPreview}
+              resizeMode="cover"
+              accessibilityLabel="Vista previa de foto de perfil"
+            />
           ) : (
             <View style={styles.photoPlaceholder}>
               <Text style={{ color: colors.textMuted, fontWeight: typography.weights.semibold }}>Toca para subir tu foto</Text>

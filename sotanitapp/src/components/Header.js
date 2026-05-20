@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../hooks/useAppTheme';
+import Pressable from './A11yPressable';
 
 export default function Header({
   title,
@@ -18,7 +19,7 @@ export default function Header({
     <View style={[styles.container, { borderBottomColor: colors.border, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }]}>
       <View style={styles.left}>
         {onBack ? (
-          <Pressable onPress={onBack} style={styles.iconButton}>
+          <Pressable onPress={onBack} style={styles.iconButton} accessibilityLabel="Volver">
             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </Pressable>
         ) : (
@@ -42,7 +43,7 @@ export default function Header({
 
       <View style={styles.right}>
         {rightIcon ? (
-          <Pressable onPress={onRightPress} style={styles.iconButton}>
+          <Pressable onPress={onRightPress} style={styles.iconButton} accessibilityLabel="Accion secundaria">
             <Ionicons name={rightIcon} size={22} color={colors.primary} />
           </Pressable>
         ) : (

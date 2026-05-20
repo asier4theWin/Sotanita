@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import StrokeText from './StrokeText';
 import { useAppTheme } from '../hooks/useAppTheme';
+import Pressable from './A11yPressable';
 
 const cardBackground = require('../../assets/fondo.png');
 const cardFrame = require('../../assets/marco.png');
@@ -76,6 +77,7 @@ export default function FifaCard({
   const backgroundSource = normalizedBackgroundUrl && !backgroundLoadFailed ? { uri: normalizedBackgroundUrl } : cardBackground;
   const photoSource = normalizedPhotoUrl && !photoLoadFailed ? { uri: normalizedPhotoUrl } : null;
   const frameSource = normalizedFrameUrl && !frameLoadFailed ? { uri: normalizedFrameUrl } : cardFrame;
+  const cardLabel = username ? `Carta de ${username}` : 'Carta de jugador';
 
   const cardContent = (
     <View
@@ -95,6 +97,7 @@ export default function FifaCard({
         style={styles.assetLayer}
         resizeMode="stretch"
         onError={() => setBackgroundLoadFailed(true)}
+        accessibilityLabel="Fondo de carta"
       />
 
       {photoSource ? (
@@ -104,6 +107,7 @@ export default function FifaCard({
             style={{ width: current.photoWidth, height: current.photoHeight }}
             resizeMode="contain"
             onError={() => setPhotoLoadFailed(true)}
+            accessibilityLabel={username ? `Foto de ${username}` : 'Foto de jugador'}
           />
         </View>
       ) : null}
@@ -148,12 +152,13 @@ export default function FifaCard({
         style={styles.frameLayer}
         resizeMode="stretch"
         onError={() => setFrameLoadFailed(true)}
+        accessibilityLabel="Marco de carta"
       />
     </View>
   );
 
   if (onPress) {
-    return <Pressable onPress={onPress}>{cardContent}</Pressable>;
+    return <Pressable onPress={onPress} accessibilityLabel={cardLabel}>{cardContent}</Pressable>;
   }
 
   return cardContent;

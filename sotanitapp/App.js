@@ -2,7 +2,7 @@ import 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Linking, Platform } from 'react-native';
+import { Image, Linking, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import { AuthProvider } from './src/context/AuthContext';
@@ -11,6 +11,14 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { useAppTheme } from './src/hooks/useAppTheme';
 
 const webPrefix = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : null;
+const APP_LANGUAGE = 'es-ES';
+
+if (!Image.defaultProps) {
+  Image.defaultProps = {};
+}
+if (!Image.defaultProps.accessibilityLabel) {
+  Image.defaultProps.accessibilityLabel = 'Imagen';
+}
 
 const linking = {
   prefixes: ['sotanitapp://', ...(webPrefix ? [webPrefix] : [])],
@@ -104,7 +112,7 @@ export default function App() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }} accessibilityLanguage={APP_LANGUAGE}>
       <SafeAreaProvider>
         <SettingsProvider>
           <AuthProvider>

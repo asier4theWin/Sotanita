@@ -7,7 +7,6 @@ import {
   Image,
   Modal,
   Platform,
-  Pressable,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -29,6 +28,7 @@ import LoadingOverlay from '../../components/LoadingOverlay';
 import StrokeText from '../../components/StrokeText';
 import { deleteVideo, deleteVideoComment, getAllVideos, getTeamById, getVideoComments, likeVideo, postForumMessage, postVideoComment, unlikeVideo, uploadCommentAudio } from '../../api/backend';
 import { formatLikes } from '../../utils/format';
+import Pressable from '../../components/A11yPressable';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:5000';
 const FRONTEND_URL = process.env.EXPO_PUBLIC_FRONTEND_URL || 'https://sotanita.vercel.app';
